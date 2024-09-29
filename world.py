@@ -78,28 +78,26 @@ class World:
                 )
 
         self.player_names = {PLAYER_1_ID: PLAYER_1_NAME, PLAYER_2_ID: PLAYER_2_NAME}
-        self.dir_names = {
-            DIRECTION_UP: DIRECTION_UP_NAME,
-            DIRECTION_RIGHT: DIRECTION_RIGHT_NAME,
-            DIRECTION_DOWN: DIRECTION_DOWN_NAME,
-            DIRECTION_LEFT: DIRECTION_LEFT_NAME,
-        }
-
-        # Moves (Up, Right, Down, Left)
-        self.moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
-
-        # Opposite Directions
-        self.opposites = {0: 2, 1: 3, 2: 0, 3: 1}
 
         if board_size is None:
-            # Random chessboard size
-            self.board_size = np.random.randint(MIN_BOARD_SIZE, MAX_BOARD_SIZE)
+            # Random board size, ensuring even numbers for Reversi Othello
+            self.board_size = np.random.choice([6, 8, 10, 12])
             logger.info(
-                f"No board size specified. Randomly generating size : {self.board_size}x{self.board_size}"
+                f"No board size specified. Randomly generating size: {self.board_size}x{self.board_size}"
             )
         else:
             self.board_size = board_size
             logger.info(f"Setting board size to {self.board_size}x{self.board_size}")
+
+        # Initialize the game board (0: empty, 1: black disc, 2: white disc)
+        self.chess_board = np.zeros((self.board_size, self.board_size), dtype=int)
+
+        # Initialize the center discs for Reversi Othello
+        mid = self.board_size // 2
+        self.chess_board[mid - 1][mid - 1] = 2  # White
+        self.chess_board[mid - 1][mid] = 1      # Black
+        self.chess_board[mid][mid - 1] = 1      # Black
+        self.chess_board[mid][mid] = 2          # White
 
         # Whose turn to step
         self.turn = 0
@@ -116,52 +114,6 @@ class World:
         self.display_save = display_save
         self.display_save_path = display_save_path
 
-        # Index in dim2 represents [Up, Right, Down, Left] respectively
-        # Record barriers and borders for each block
-        self.chess_board = np.zeros((self.board_size, self.board_size, 4), dtype=bool)
-
-        # Set borders
-        self.chess_board[0, :, 0] = True
-        self.chess_board[:, 0, 3] = True
-        self.chess_board[-1, :, 2] = True
-        self.chess_board[:, -1, 1] = True
-
-        # Maximum Steps is how far agents will move each turn (at max)
-        self.max_step = (self.board_size + 1) // 2
-        
-        # Fill some random barriers. Few enough to ensure we never start 
-        # with a full wall
-        num_barriers = self.board_size // 2 - 1
-
-        # Random barriers (symmetric)
-        for _ in range(num_barriers):
-            pos = np.random.randint(0, self.board_size, size=2)
-            r, c = pos
-            dir = np.random.randint(0, 4)
-            while self.chess_board[r, c, dir]:
-                pos = np.random.randint(0, self.board_size, size=2)
-                r, c = pos
-                dir = np.random.randint(0, 4)
-            anti_pos = self.board_size - 1 - pos
-            anti_dir = self.opposites[dir]
-            anti_r, anti_c = anti_pos
-            self.set_barrier(r, c, dir)
-            self.set_barrier(anti_r, anti_c, anti_dir)
-
-        # Random start position (symmetric but not overlap)
-        self.p0_pos = np.random.randint(0, self.board_size, size=2)
-        self.p1_pos = self.board_size - 1 - self.p0_pos
-
-        # Check that initialization does not fall into a weird case, 
-        # such as agent stuck in tiny box to begin. Repeat if necessary.
-        self.initial_end, _, _ = self.check_endgame()
-        while np.array_equal(self.p0_pos, self.p1_pos) or self.initial_end:
-            self.p0_pos = np.random.randint(0, self.board_size, size=2)
-            self.p1_pos = self.board_size - 1 - self.p0_pos
-            self.initial_end, _, _ = self.check_endgame()  
-              
-        assert(not self.initial_end)
-
         if display_ui:
             # Initialize UI Engine
             logger.info(
@@ -172,16 +124,9 @@ class World:
 
     def get_current_player(self):
         """
-        Get the positions of the current player
-
-        Returns
-        -------
-        tuple of (current_player_obj, current_player_pos, adversary_player_pos)
+        Get the current player (1: Black, 2: White)
         """
-        if not self.turn:
-            return self.p0, self.p0_pos, self.p1_pos
-        else:
-            return self.p1, self.p1_pos, self.p0_pos
+        return 1 if self.turn == 0 else 2
 
     def update_player_time(self, time_taken):
         """
@@ -200,47 +145,35 @@ class World:
     def step(self):
         """
         Take a step in the game world.
-        Runs the agents' step function and update the game board accordingly.
-        If the agents' step function raises an exception, the step will be replaced by a Random Walk.
+        Runs the agents' step function and updates the game board accordingly.
+        If the agents' step function raises an exception, the step will be replaced by a Random Move.
 
         Returns
         -------
         results: tuple
             The results of the step containing (is_endgame, player_1_score, player_2_score)
         """
-        cur_player, cur_pos, adv_pos = self.get_current_player()
+        cur_player = self.get_current_player()
+        opponent = 3 - cur_player  # 1 if current player is 2, 2 if current player is 1
 
         try:
-            # Run the agents step function
+            # Run the agent's step function
             start_time = time()
-            next_pos, dir = cur_player.step(
+            move_pos = self.get_current_agent().step(
                 deepcopy(self.chess_board),
-                tuple(cur_pos),
-                tuple(adv_pos),
-                self.max_step,
+                cur_player,
+                opponent,
             )
             time_taken = time() - start_time
             self.update_player_time(time_taken)
 
-            next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
-            if not self.check_boundary(next_pos):
-                raise ValueError("End position {} is out of boundary".format(next_pos))
-            if not 0 <= dir <= 3:
-                raise ValueError(
-                    "Barrier dir should reside in [0, 3], but your dir is {}".format(
-                        dir
-                    )
-                )
-            if not self.check_valid_step(cur_pos, next_pos, dir):
-                raise ValueError(
-                    "Not a valid step from {} to {} and put barrier at {}, with max steps = {}".format(
-                        cur_pos, next_pos, dir, self.max_step
-                    )
-                )
+            if not self.is_valid_move(move_pos, cur_player):
+                raise ValueError(f"Invalid move by player {cur_player}: {move_pos}")
+
         except BaseException as e:
             ex_type = type(e).__name__
             if (
-                "SystemExit" in ex_type and isinstance(cur_player, HumanAgent)
+                "SystemExit" in ex_type and isinstance(self.get_current_agent(), HumanAgent)
             ) or "KeyboardInterrupt" in ex_type:
                 sys.exit(0)
             print(
@@ -248,22 +181,39 @@ class World:
                     traceback.format_exc()
                 )
             )
-            print("Execute Random Walk!")
-            next_pos, dir = self.random_walk(tuple(cur_pos), tuple(adv_pos))
-            next_pos = np.asarray(next_pos, dtype=cur_pos.dtype)
+            print("Executing Random Move!")
+            move_pos = self.random_move(cur_player)
 
-        # Print out each step
-        # print(self.turn, next_pos, dir)
+            ########
+            if move_pos is None:
+                print(f"Player {cur_player} has no valid moves. Ending the game.")
+
+                p0_score = np.sum(self.chess_board == 1)
+                p1_score = np.sum(self.chess_board == 2)
+    
+                results = True, p0_score, p1_score
+                self.results_cache = results
+
+                # Render board and show results
+                if self.display_ui:
+                    self.render()
+                    if results[0]:
+                        click.echo("Press a button to exit the game.")
+                        try:
+                            _ = click.getchar()
+                        except:
+                            _ = input()
+
+                return results
+        
+
+            ############
+
+        # Execute move
+        self.execute_move(move_pos, cur_player)
         logger.info(
-            f"Player {self.player_names[self.turn]} moves to {next_pos} facing {self.dir_names[dir]}. Time taken this turn (in seconds): {time_taken}"
+            f"Player {self.player_names[self.turn]} places at {move_pos}. Time taken this turn (in seconds): {time_taken}"
         )
-        if not self.turn:
-            self.p0_pos = next_pos
-        else:
-            self.p1_pos = next_pos
-        # Set the barrier to True
-        r, c = next_pos
-        self.set_barrier(r, c, dir)
 
         # Change turn
         self.turn = 1 - self.turn
@@ -271,69 +221,125 @@ class World:
         results = self.check_endgame()
         self.results_cache = results
 
-        # Print out Chessboard for visualization
+        # Render board and show results
         if self.display_ui:
             self.render()
             if results[0]:
-                # If game ends and displaying the ui, wait for user input
                 click.echo("Press a button to exit the game.")
                 try:
                     _ = click.getchar()
                 except:
                     _ = input()
+
         return results
 
-    def check_valid_step(self, start_pos, end_pos, barrier_dir):
+    def is_valid_move(self, move_pos, player):
         """
-        Check if the step the agent takes is valid (reachable and within max steps).
+        Check if the move is valid (i.e., it captures at least one opponent's disc).
 
         Parameters
         ----------
-        start_pos : tuple
-            The start position of the agent.
-        end_pos : np.ndarray
-            The end position of the agent.
-        barrier_dir : int
-            The direction of the barrier.
+        move_pos : tuple
+            The position where the player wants to place a disc
+        player : int
+            The current player (1: Black, 2: White)
+
+        Returns
+        -------
+        bool
+            Whether the move is valid
         """
-        # Endpoint already has barrier or is border
-        r, c = end_pos
-        if self.chess_board[r, c, barrier_dir]:
+        r, c = move_pos
+        if self.chess_board[r, c] != 0:
             return False
-        if np.array_equal(start_pos, end_pos):
-            return True
 
-        # Get position of the adversary
-        adv_pos = self.p0_pos if self.turn else self.p1_pos
+        # Check if move captures any opponent discs in any direction
+        for move in self.get_directions():
+            if self.check_capture(move_pos, player, move):
+                return True
 
-        # BFS
-        state_queue = [(start_pos, 0)]
-        visited = {tuple(start_pos)}
-        is_reached = False
-        while state_queue and not is_reached:
-            cur_pos, cur_step = state_queue.pop(0)
-            r, c = cur_pos
-            if cur_step == self.max_step:
-                break
-            for dir, move in enumerate(self.moves):
-                if self.chess_board[r, c, dir]:
-                    continue
+        return False
 
-                next_pos = cur_pos + move
-                if np.array_equal(next_pos, adv_pos) or tuple(next_pos) in visited:
-                    continue
-                if np.array_equal(next_pos, end_pos):
-                    is_reached = True
-                    break
+    def check_capture(self, move_pos, player, direction):
+        """
+        Check if placing a disc at move_pos captures any discs in the specified direction.
 
-                visited.add(tuple(next_pos))
-                state_queue.append((next_pos, cur_step + 1))
+        Parameters
+        ----------
+        move_pos : tuple
+            The position where the player places the disc
+        player : int
+            The current player (1: Black, 2: White)
+        direction : tuple
+            The direction to check (dx, dy)
 
-        return is_reached
+        Returns
+        -------
+        bool
+            Whether discs can be captured in the specified direction
+        """
+        r, c = move_pos
+        dx, dy = direction
+        r += dx
+        c += dy
+        captured = []
+
+        while 0 <= r < self.board_size and 0 <= c < self.board_size:
+            if self.chess_board[r, c] == 0:
+                return False
+            if self.chess_board[r, c] == player:
+                return len(captured) > 0
+            captured.append((r, c))
+            r += dx
+            c += dy
+
+        return False
+
+    def execute_move(self, move_pos, player):
+        """
+        Execute the move and flip the opponent's discs accordingly.
+
+        Parameters
+        ----------
+        move_pos : tuple
+            The position where the player places the disc
+        player : int
+            The current player (1: Black, 2: White)
+        """
+        r, c = move_pos
+        self.chess_board[r, c] = player
+
+        # Flip opponent's discs in all directions where captures occur
+        for direction in self.get_directions():
+            if self.check_capture(move_pos, player, direction):
+                self.flip_discs(move_pos, player, direction)
+
+    def flip_discs(self, move_pos, player, direction):
+        """
+        Flip the discs in the specified direction.
+
+        Parameters
+        ----------
+        move_pos : tuple
+            The position where the player places the disc
+        player : int
+            The current player (1: Black, 2: White)
+        direction : tuple
+            The direction to check (dx, dy)
+        """
+        r, c = move_pos
+        dx, dy = direction
+        r += dx
+        c += dy
+
+        while self.chess_board[r, c] != player:
+            self.chess_board[r, c] = player
+            r += dx
+            c += dy
 
     def check_endgame(self):
         """
-        Check if the game ends and compute the current score of the agents.
+        Check if the game ends and compute the final score.
 
         Returns
         -------
@@ -344,119 +350,73 @@ class World:
         player_2_score : int
             The score of player 2.
         """
-        # Union-Find
-        father = dict()
-        for r in range(self.board_size):
-            for c in range(self.board_size):
-                father[(r, c)] = (r, c)
+        if not np.any(self.chess_board == 0):  # No empty spaces left
+            p0_score = np.sum(self.chess_board == 1)
+            p1_score = np.sum(self.chess_board == 2)
+            return True, p0_score, p1_score
 
-        def find(pos):
-            if father[pos] != pos:
-                father[pos] = find(father[pos])
-            return father[pos]
+        return False, np.sum(self.chess_board == 1), np.sum(self.chess_board == 2)
 
-        def union(pos1, pos2):
-            father[pos1] = pos2
-
-        for r in range(self.board_size):
-            for c in range(self.board_size):
-                for dir, move in enumerate(
-                    self.moves[1:3]
-                ):  # Only check down and right
-                    if self.chess_board[r, c, dir + 1]:
-                        continue
-                    pos_a = find((r, c))
-                    pos_b = find((r + move[0], c + move[1]))
-                    if pos_a != pos_b:
-                        union(pos_a, pos_b)
-
-        for r in range(self.board_size):
-            for c in range(self.board_size):
-                find((r, c))
-        p0_r = find(tuple(self.p0_pos))
-        p1_r = find(tuple(self.p1_pos))
-        p0_score = list(father.values()).count(p0_r)
-        p1_score = list(father.values()).count(p1_r)
-        if p0_r == p1_r:
-            return False, p0_score, p1_score
-        player_win = None
-        win_blocks = -1
-        if p0_score > p1_score:
-            player_win = 0
-            win_blocks = p0_score
-        elif p0_score < p1_score:
-            player_win = 1
-            win_blocks = p1_score
-        else:
-            player_win = -1  # Tie
-        if player_win >= 0:
-            logging.info(
-                f"Game ends! Player {self.player_names[player_win]} wins having control over {win_blocks} blocks!"
-            )
-        else:
-            logging.info("Game ends! It is a Tie!")
-        return True, p0_score, p1_score
-
-    def check_boundary(self, pos):
-        r, c = pos
-        return 0 <= r < self.board_size and 0 <= c < self.board_size
-
-    def set_barrier(self, r, c, dir):
-        # Set the barrier to True
-        self.chess_board[r, c, dir] = True
-        # Set the opposite barrier to True
-        move = self.moves[dir]
-        self.chess_board[r + move[0], c + move[1], self.opposites[dir]] = True
-
-    def random_walk(self, my_pos, adv_pos):
+    def get_directions(self):
         """
-        Randomly walk to the next position in the board.
+        Get all directions (8 directions: up, down, left, right, and diagonals)
+
+        Returns
+        -------
+        list of tuple
+            List of direction vectors
+        """
+        return [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+    def random_move(self, player):
+        """
+        Randomly select a valid move.
 
         Parameters
         ----------
-        my_pos : tuple
-            The position of the agent.
-        adv_pos : tuple
-            The position of the adversary.
+        player : int
+            The current player (1: Black, 2: White)
+
+        Returns
+        -------
+        tuple
+            The position to place the disc
         """
-        steps = np.random.randint(0, self.max_step + 1)
+        valid_moves = []
+        for r in range(self.board_size):
+            for c in range(self.board_size):
+                if self.is_valid_move((r, c), player):
+                    valid_moves.append((r, c))
+        
+        """
+        """
+        #### 
+        if len(valid_moves) == 0:
+            # If no valid moves are available, return None
+            print(f"No valid moves left for player {player}.")
+            return None
+        
 
-        # Pick steps random but allowable moves
-        for _ in range(steps):
-            r, c = my_pos
+        
+        
+        return valid_moves[np.random.randint(0, len(valid_moves))]
 
-            # Build a list of the moves we can make
-            allowed_dirs = [ d                                
-                for d in range(0,4)                                      # 4 moves possible
-                if not self.chess_board[r,c,d] and                       # chess_board True means wall
-                not adv_pos == (r+self.moves[d][0],c+self.moves[d][1])]  # cannot move through Adversary
+    def get_current_agent(self):
+        """
+        Get the current player's agent
 
-            if len(allowed_dirs)==0:
-                # If no possible move, we must be enclosed by our Adversary
-                break
-
-            random_dir = allowed_dirs[np.random.randint(0, len(allowed_dirs))]
-
-            # This is how to update a row,col by the entries in moves 
-            # to be consistent with game logic
-            m_r, m_c = self.moves[random_dir]
-            my_pos = (r + m_r, c + m_c)
-
-        # Final portion, pick where to put our new barrier, at random
-        r, c = my_pos
-        # Possibilities, any direction such that chess_board is False
-        allowed_barriers=[i for i in range(0,4) if not self.chess_board[r,c,i]]
-        # Sanity check, no way to be fully enclosed in a square, else game already ended
-        assert len(allowed_barriers)>=1 
-        dir = allowed_barriers[np.random.randint(0, len(allowed_barriers))]
-
-        return my_pos, dir
+        Returns
+        -------
+        agent : object
+            The agent object of the current player
+        """
+        return self.p0 if self.turn == 0 else self.p1
 
     def render(self, debug=False):
         """
         Render the game board using the UI Engine
         """
-        self.ui_engine.render(self.chess_board, self.p0_pos, self.p1_pos, debug=debug)
+        self.ui_engine.render(self.chess_board, debug=debug)
         sleep(self.display_delay)
 
 

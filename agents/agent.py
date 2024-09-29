@@ -10,27 +10,24 @@ class Agent:
     def __str__(self) -> str:
         return self.name
 
-    def step(self, chess_board, my_pos, adv_pos, max_step):
+    def step(self, chess_board, player, opponent):
         """
         Main decision logic of the agent, which is called by the simulator.
         Extend this method to implement your own agent to play the game.
 
         Parameters
         ----------
-        chess_board : numpy.ndarray of shape (board_size, board_size, 4)
-            The chess board.
-        my_pos : tuple of int
-            The position of the agent.
-        adv_pos : tuple of int
-            The position of the adversary (opponent).
-        max_step : int
-            The maximum number of steps that the agent can take.
+        chess_board : numpy.ndarray of shape (board_size, board_size)
+            The chess board with 0 representing an empty space, 1 for black (Player 1),
+            and 2 for white (Player 2).
+        player : int
+            The current player (1 for black, 2 for white).
+        opponent : int
+            The opponent player (1 for black, 2 for white).
 
         Returns
         -------
-        my_pos : tuple of int
-            The new position of the agent.
-        dir : int
-            The direction of the agent, as defined in world.py (DIRECTION_UP/DIRECTION_DOWN/DIRECTION_LEFT/DIRECTION_RIGHT).
+        move_pos : tuple of int
+            The position (x, y) where the player places the disc.
         """
         pass

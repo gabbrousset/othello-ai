@@ -1,6 +1,6 @@
 AGENT_REGISTRY = {}
 
-# define decorator for registering game agents
+# Define decorator for registering game agents
 def register_agent(agent_name=""):
     def decorator(func):
         if agent_name not in AGENT_REGISTRY:

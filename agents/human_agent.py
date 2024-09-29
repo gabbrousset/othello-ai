@@ -9,42 +9,69 @@ class HumanAgent(Agent):
     def __init__(self):
         super(HumanAgent, self).__init__()
         self.name = "HumanAgent"
-        self.dir_map = {
-            "u": 0,
-            "r": 1,
-            "d": 2,
-            "l": 3,
-        }
 
-    def step(self, chess_board, my_pos, adv_pos, max_step):
-        text = input("Your move (x,y,dir) or input q to quit: ")
-        while len(text.split(",")) != 3 and "q" not in text.lower():
-            print("Wrong Input Format!")
-            text = input("Your move (x,y,dir) or input q to quit: ")
+    def step(self, chess_board, player, opponent):
+        """
+        Get human input for the position to place the disc
+
+        Parameters
+        ----------
+        chess_board : numpy.ndarray of shape (board_size, board_size)
+            The chess board with 0 representing an empty space, 1 for black (Player 1),
+            and 2 for white (Player 2).
+        player : int
+            The current player (1 for black, 2 for white).
+        opponent : int
+            The opponent player (1 for black, 2 for white).
+
+        Returns
+        -------
+        move_pos : tuple of int
+            The position (x, y) where the player places the disc.
+        """
+        text = input("Your move (x,y) or input q to quit: ")
+        while len(text.split(",")) != 2 and "q" not in text.lower():
+            print("Wrong Input Format! Input should be x,y.")
+            text = input("Your move (x,y) or input q to quit: ")
+        
         if "q" in text.lower():
             print("Game ended by user!")
             sys.exit(0)
-        x, y, dir = text.split(",")
-        x, y, dir = x.strip(), y.strip(), dir.strip()
-        x, y = int(x), int(y)
-        while not self.check_valid_input(
-            x, y, dir, chess_board.shape[0], chess_board.shape[1]
-        ):
-            print(
-                "Invalid Move! (x, y) should be within the board and dir should be one of u,r,d,l."
-            )
-            text = input("Your move (x,y,dir) or input q to quit: ")
-            while len(text.split(",")) != 3 and "q" not in text.lower():
-                print("Wrong Input Format!")
-                text = input("Your move (x,y,dir) or input q to quit: ")
+        
+        x, y = text.split(",")
+        x, y = int(x.strip()), int(y.strip())
+        
+        while not self.check_valid_input(x, y, chess_board):
+            print("Invalid Move! (x, y) should be within the board and the position must be empty.")
+            text = input("Your move (x,y) or input q to quit: ")
+            while len(text.split(",")) != 2 and "q" not in text.lower():
+                print("Wrong Input Format! Input should be x,y.")
+                text = input("Your move (x,y) or input q to quit: ")
             if "q" in text.lower():
                 print("Game ended by user!")
                 sys.exit(0)
-            x, y, dir = text.split(",")
-            x, y, dir = x.strip(), y.strip(), dir.strip()
-            x, y = int(x), int(y)
-        my_pos = (x, y)
-        return my_pos, self.dir_map[dir]
+            x, y = text.split(",")
+            x, y = int(x.strip()), int(y.strip())
+        
+        return (x, y)
 
-    def check_valid_input(self, x, y, dir, x_max, y_max):
-        return 0 <= x < x_max and 0 <= y < y_max and dir in self.dir_map
+    def check_valid_input(self, x, y, chess_board):
+        """
+        Check if the input position is valid (within the board and the spot is empty)
+
+        Parameters
+        ----------
+        x : int
+            The x position on the board.
+        y : int
+            The y position on the board.
+        chess_board : numpy.ndarray of shape (board_size, board_size)
+            The chess board with 0 representing an empty space, 1 for black, and 2 for white.
+
+        Returns
+        -------
+        bool
+            True if the input is valid, False otherwise.
+        """
+        board_size = chess_board.shape[0]
+        return 0 <= x < board_size and 0 <= y < board_size and chess_board[x, y] == 0

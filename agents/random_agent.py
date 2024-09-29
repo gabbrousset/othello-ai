@@ -1,5 +1,4 @@
 import numpy as np
-from copy import deepcopy
 from agents.agent import Agent
 from store import register_agent
 
@@ -15,38 +14,35 @@ class RandomAgent(Agent):
         self.name = "RandomAgent"
         self.autoplay = True
 
-    def step(self, chess_board, my_pos, adv_pos, max_step):
-        # Moves (Up, Right, Down, Left)
-        moves = ((-1, 0), (0, 1), (1, 0), (0, -1))
-        steps = np.random.randint(0, max_step + 1)
+    def step(self, chess_board, player, opponent):
+        """
+        Randomly selects a valid position to place a disc.
 
-        # Pick steps random but allowable moves
-        for _ in range(steps):
-            r, c = my_pos
+        Parameters
+        ----------
+        chess_board : numpy.ndarray of shape (board_size, board_size)
+            The chess board with 0 representing an empty space, 1 for black (Player 1),
+            and 2 for white (Player 2).
+        player : int
+            The current player (1 for black, 2 for white).
+        opponent : int
+            The opponent player (1 for black, 2 for white).
 
-            # Build a list of the moves we can make
-            allowed_dirs = [ d                                
-                for d in range(0,4)                           # 4 moves possible
-                if not chess_board[r,c,d] and                 # chess_board True means wall
-                not adv_pos == (r+moves[d][0],c+moves[d][1])] # cannot move through Adversary
+        Returns
+        -------
+        move_pos : tuple of int
+            The position (x, y) where the player places the disc.
+        """
+        board_size = chess_board.shape[0]
 
-            if len(allowed_dirs)==0:
-                # If no possible move, we must be enclosed by our Adversary
-                break
+        # Build a list of valid moves (empty spots on the board)
+        valid_moves = []
+        for r in range(board_size):
+            for c in range(board_size):
+                if chess_board[r, c] == 0:  # Valid move if the spot is empty
+                    valid_moves.append((r, c))
 
-            random_dir = allowed_dirs[np.random.randint(0, len(allowed_dirs))]
+        # Randomly select a move from the list of valid moves
+        move_pos = valid_moves[np.random.randint(0, len(valid_moves))]
 
-            # This is how to update a row,col by the entries in moves 
-            # to be consistent with game logic
-            m_r, m_c = moves[random_dir]
-            my_pos = (r + m_r, c + m_c)
-
-        # Final portion, pick where to put our new barrier, at random
-        r, c = my_pos
-        # Possibilities, any direction such that chess_board is False
-        allowed_barriers=[i for i in range(0,4) if not chess_board[r,c,i]]
-        # Sanity check, no way to be fully enclosed in a square, else game already ended
-        assert len(allowed_barriers)>=1 
-        dir = allowed_barriers[np.random.randint(0, len(allowed_barriers))]
-
-        return my_pos, dir
+        return move_pos

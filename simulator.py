@@ -2,13 +2,14 @@ from world import World, PLAYER_1_NAME, PLAYER_2_NAME
 import argparse
 from utils import all_logging_disabled
 import logging
-#from tqdm import tqdm
+# from tqdm import tqdm
 import numpy as np
 import datetime
 
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
 logger = logging.getLogger(__name__)
+
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -32,9 +33,10 @@ def get_args():
     parser.add_argument("--display_save", action="store_true", default=False)
     parser.add_argument("--display_save_path", type=str, default="plots/")
     parser.add_argument("--autoplay", action="store_true", default=False)
-    parser.add_argument("--autoplay_runs", type=int, default=1000)
+    parser.add_argument("--autoplay_runs", type=int, default=100)
     args = parser.parse_args()
     return args
+
 
 class Simulator:
     """
@@ -98,10 +100,10 @@ class Simulator:
             logger.warning("Since running autoplay mode, display will be disabled")
         self.args.display = False
         with all_logging_disabled():
-            #for i in tqdm(range(self.args.autoplay_runs)):
+            # for i in tqdm(range(self.args.autoplay_runs)):
             for i in range(self.args.autoplay_runs):
                 swap_players = i % 2 == 0
-                board_size = np.random.randint(args.board_size_min, args.board_size_max)
+                board_size = np.random.randint(self.args.board_size_min, self.args.board_size_max)
                 p0_score, p1_score, p0_time, p1_time = self.run(
                     swap_players=swap_players, board_size=board_size
                 )
@@ -123,15 +125,27 @@ class Simulator:
                 p2_times.extend(p1_time)
 
         logger.info(
-            f"Player {PLAYER_1_NAME} win percentage: {p1_win_count / self.args.autoplay_runs}. Maxium turn time was {np.round(np.max(p1_times),5)} seconds.")
+            f"Player {PLAYER_1_NAME} win percentage: {p1_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p1_times),5)} seconds."
+        )
         logger.info(
-            f"Player {PLAYER_2_NAME} win percentage: {p2_win_count / self.args.autoplay_runs}. Maxium turn time was {np.round(np.max(p2_times),5)} seconds.")
-        
-        fname = "tournament_results/"+self.world.player_1_name+"_vs_"+self.world.player_2_name+"_at_"+datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")+".csv"
-        fo = open(fname,"w")
-        fo.write(f"P1Name,P2Name,NumRuns,P1WinPercent,P2WinPercent,P1RunTime,P2RunTime\n")
-        fo.write(f"{self.world.player_1_name},{self.world.player_2_name},{self.args.autoplay_runs},{p1_win_count / self.args.autoplay_runs},{p2_win_count / self.args.autoplay_runs},{np.round(np.max(p1_times),5)},{np.round(np.max(p2_times),5)}\n")
-        fo.close()
+            f"Player {PLAYER_2_NAME} win percentage: {p2_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p2_times),5)} seconds."
+        )
+
+        fname = (
+            "tournament_results/"
+            + self.world.player_1_name
+            + "_vs_"
+            + self.world.player_2_name
+            + "_at_"
+            + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            + ".csv"
+        )
+        with open(fname, "w") as fo:
+            fo.write(f"P1Name,P2Name,NumRuns,P1WinPercent,P2WinPercent,P1RunTime,P2RunTime\n")
+            fo.write(
+                f"{self.world.player_1_name},{self.world.player_2_name},{self.args.autoplay_runs},{p1_win_count / self.args.autoplay_runs},{p2_win_count / self.args.autoplay_runs},{np.round(np.max(p1_times),5)},{np.round(np.max(p2_times),5)}\n"
+            )
+
 
 if __name__ == "__main__":
     args = get_args()
