@@ -27,12 +27,12 @@ class HumanAgent(Agent):
         Returns
         -------
         move_pos : tuple of int
-            The position (x, y) where the player places the disc.
+            The position (r,c) where the player places the disc.
         """
-        text = input("Your move (x,y) or input q to quit: ")
+        text = input("Your move (row,column) or input q to quit: ")
         while len(text.split(",")) != 2 and "q" not in text.lower():
-            print("Wrong Input Format! Input should be x,y.")
-            text = input("Your move (x,y) or input q to quit: ")
+            print("Wrong Input Format! Input should be row,column.")
+            text = input("Your move (row,column) or input q to quit: ")
         
         if "q" in text.lower():
             print("Game ended by user!")
@@ -42,11 +42,11 @@ class HumanAgent(Agent):
         x, y = int(x.strip()), int(y.strip())
         
         while not self.check_valid_input(x, y, chess_board):
-            print("Invalid Move! (x, y) should be within the board and the position must be empty.")
-            text = input("Your move (x,y) or input q to quit: ")
+            print("Invalid Move! (row,column) should be within the board and the position must be empty.")
+            text = input("Your move (row,column) or input q to quit: ")
             while len(text.split(",")) != 2 and "q" not in text.lower():
-                print("Wrong Input Format! Input should be x,y.")
-                text = input("Your move (x,y) or input q to quit: ")
+                print("Wrong Input Format! Input should be row,column.")
+                text = input("Your move (row,column) or input q to quit: ")
             if "q" in text.lower():
                 print("Game ended by user!")
                 sys.exit(0)

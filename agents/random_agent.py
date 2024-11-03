@@ -1,6 +1,7 @@
 import numpy as np
 from agents.agent import Agent
 from store import register_agent
+from helpers import random_move
 
 # Important: you should register your agent with a name
 @register_agent("random_agent")
@@ -33,16 +34,5 @@ class RandomAgent(Agent):
         move_pos : tuple of int
             The position (x, y) where the player places the disc.
         """
-        board_size = chess_board.shape[0]
-
-        # Build a list of valid moves (empty spots on the board)
-        valid_moves = []
-        for r in range(board_size):
-            for c in range(board_size):
-                if chess_board[r, c] == 0:  # Valid move if the spot is empty
-                    valid_moves.append((r, c))
-
-        # Randomly select a move from the list of valid moves
-        move_pos = valid_moves[np.random.randint(0, len(valid_moves))]
-
-        return move_pos
+        
+        return random_move(chess_board,player)

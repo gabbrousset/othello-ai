@@ -2,7 +2,6 @@ from world import World, PLAYER_1_NAME, PLAYER_2_NAME
 import argparse
 from utils import all_logging_disabled
 import logging
-# from tqdm import tqdm
 import numpy as np
 import datetime
 
@@ -67,6 +66,7 @@ class Simulator:
             player_1, player_2 = self.args.player_2, self.args.player_1
         else:
             player_1, player_2 = self.args.player_1, self.args.player_2
+
         self.world = World(
             player_1=player_1,
             player_2=player_2,
@@ -100,7 +100,6 @@ class Simulator:
             logger.warning("Since running autoplay mode, display will be disabled")
         self.args.display = False
         with all_logging_disabled():
-            # for i in tqdm(range(self.args.autoplay_runs)):
             for i in range(self.args.autoplay_runs):
                 swap_players = i % 2 == 0
                 board_size = np.random.randint(self.args.board_size_min, self.args.board_size_max)
@@ -131,6 +130,9 @@ class Simulator:
             f"Player {PLAYER_2_NAME} win percentage: {p2_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p2_times),5)} seconds."
         )
 
+        """
+        The code in this comment will be part of the book-keeping that we use to score the end-of-term tournament. FYI. 
+        Uncomment and use it if you find this book-keeping helpful.
         fname = (
             "tournament_results/"
             + self.world.player_1_name
@@ -145,7 +147,7 @@ class Simulator:
             fo.write(
                 f"{self.world.player_1_name},{self.world.player_2_name},{self.args.autoplay_runs},{p1_win_count / self.args.autoplay_runs},{p2_win_count / self.args.autoplay_runs},{np.round(np.max(p1_times),5)},{np.round(np.max(p2_times),5)}\n"
             )
-
+        """
 
 if __name__ == "__main__":
     args = get_args()

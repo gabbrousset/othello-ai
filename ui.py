@@ -121,8 +121,8 @@ class UIEngine:
         plt.yticks(ticks, labels)
         # Move x-axis to the top
         plt.tick_params(bottom=False, labelbottom=False, top=True, labeltop=True)
-        plt.xlabel("Y Position")
-        plt.ylabel("X Position", position="top")
+        plt.xlabel("Column")
+        plt.ylabel("Row", position="top")
 
     def plot_text_info(self):
         """
@@ -152,7 +152,7 @@ class UIEngine:
 
         if len(self.world.results_cache) > 0:
             plt.figtext(
-                0.4,
+                0.5,
                 0.1,
                 f"Scores: Blue: [{self.world.results_cache[1]}], Brown: [{self.world.results_cache[2]}]",
                 horizontalalignment="left",
@@ -166,7 +166,7 @@ class UIEngine:
                     win_player = "It is a Tie!"
 
                 plt.figtext(
-                    0.4,
+                    0.5,
                     0.05,
                     win_player,
                     horizontalalignment="left",

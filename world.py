@@ -9,11 +9,11 @@ import logging
 from store import AGENT_REGISTRY
 from constants import *
 import sys
+from helpers import count_capture, execute_move, check_endgame, random_move, get_valid_moves
 
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
 logger = logging.getLogger(__name__)
-
 
 class World:
     def __init__(
@@ -22,7 +22,7 @@ class World:
         player_2="random_agent",
         board_size=None,
         display_ui=False,
-        display_delay=2,
+        display_delay=0.4,
         display_save=False,
         display_save_path=None,
         autoplay=False,
@@ -127,6 +127,12 @@ class World:
         Get the current player (1: Black, 2: White)
         """
         return 1 if self.turn == 0 else 2
+    
+    def get_current_opponent(self):
+        """
+        Get the opponent player (1: Black, 2: White)
+        """
+        return 2 if self.turn == 0 else 1
 
     def update_player_time(self, time_taken):
         """
@@ -154,71 +160,51 @@ class World:
             The results of the step containing (is_endgame, player_1_score, player_2_score)
         """
         cur_player = self.get_current_player()
-        opponent = 3 - cur_player  # 1 if current player is 2, 2 if current player is 1
+        opponent = self.get_current_opponent()
 
-        try:
-            # Run the agent's step function
-            start_time = time()
-            move_pos = self.get_current_agent().step(
-                deepcopy(self.chess_board),
-                cur_player,
-                opponent,
-            )
-            time_taken = time() - start_time
-            self.update_player_time(time_taken)
+        valid_moves = get_valid_moves(self.chess_board,cur_player)
 
-            if not self.is_valid_move(move_pos, cur_player):
-                raise ValueError(f"Invalid move by player {cur_player}: {move_pos}")
-
-        except BaseException as e:
-            ex_type = type(e).__name__
-            if (
-                "SystemExit" in ex_type and isinstance(self.get_current_agent(), HumanAgent)
-            ) or "KeyboardInterrupt" in ex_type:
-                sys.exit(0)
-            print(
-                "An exception raised. The traceback is as follows:\n{}".format(
-                    traceback.format_exc()
+        if not valid_moves:
+            logger.info(f"Player {self.player_names[self.turn]} must pass due to having no valid moves.")
+        else:
+            try:
+                # Run the agent's step function
+                start_time = time()
+                move_pos = self.get_current_agent().step(
+                    deepcopy(self.chess_board),
+                    cur_player,
+                    opponent,
                 )
+                time_taken = time() - start_time
+                self.update_player_time(time_taken)
+
+                if count_capture(self.chess_board, move_pos, cur_player) == 0:
+                    raise ValueError(f"Invalid move by player {cur_player}: {move_pos}")
+
+            except BaseException as e:
+                ex_type = type(e).__name__
+                if (
+                    "SystemExit" in ex_type and isinstance(self.get_current_agent(), HumanAgent)
+                ) or "KeyboardInterrupt" in ex_type:
+                    sys.exit(0)
+                print(
+                    "An exception raised. The traceback is as follows:\n{}".format(
+                        traceback.format_exc()
+                    )
+                )
+                print("Executing Random Move!")
+                move_pos = random_move(self.chess_board,cur_player)
+
+            # Execute move
+            execute_move(self.chess_board,move_pos, cur_player)
+            logger.info(
+                f"Player {self.player_names[self.turn]} places at {move_pos}. Time taken this turn (in seconds): {time_taken}"
             )
-            print("Executing Random Move!")
-            move_pos = self.random_move(cur_player)
-
-            ########
-            if move_pos is None:
-                print(f"Player {cur_player} has no valid moves. Ending the game.")
-
-                p0_score = np.sum(self.chess_board == 1)
-                p1_score = np.sum(self.chess_board == 2)
-    
-                results = True, p0_score, p1_score
-                self.results_cache = results
-
-                # Render board and show results
-                if self.display_ui:
-                    self.render()
-                    if results[0]:
-                        click.echo("Press a button to exit the game.")
-                        try:
-                            _ = click.getchar()
-                        except:
-                            _ = input()
-
-                return results
-        
-
-            ############
-
-        # Execute move
-        self.execute_move(move_pos, cur_player)
-        logger.info(
-            f"Player {self.player_names[self.turn]} places at {move_pos}. Time taken this turn (in seconds): {time_taken}"
-        )
 
         # Change turn
         self.turn = 1 - self.turn
 
-        results = self.check_endgame()
+        results = check_endgame(self.chess_board, self.get_current_player(),self.get_current_opponent())
         self.results_cache = results
 
         # Render board and show results
@@ -232,174 +218,6 @@ class World:
                     _ = input()
 
         return results
-
-    def is_valid_move(self, move_pos, player):
-        """
-        Check if the move is valid (i.e., it captures at least one opponent's disc).
-
-        Parameters
-        ----------
-        move_pos : tuple
-            The position where the player wants to place a disc
-        player : int
-            The current player (1: Black, 2: White)
-
-        Returns
-        -------
-        bool
-            Whether the move is valid
-        """
-        r, c = move_pos
-        if self.chess_board[r, c] != 0:
-            return False
-
-        # Check if move captures any opponent discs in any direction
-        for move in self.get_directions():
-            if self.check_capture(move_pos, player, move):
-                return True
-
-        return False
-
-    def check_capture(self, move_pos, player, direction):
-        """
-        Check if placing a disc at move_pos captures any discs in the specified direction.
-
-        Parameters
-        ----------
-        move_pos : tuple
-            The position where the player places the disc
-        player : int
-            The current player (1: Black, 2: White)
-        direction : tuple
-            The direction to check (dx, dy)
-
-        Returns
-        -------
-        bool
-            Whether discs can be captured in the specified direction
-        """
-        r, c = move_pos
-        dx, dy = direction
-        r += dx
-        c += dy
-        captured = []
-
-        while 0 <= r < self.board_size and 0 <= c < self.board_size:
-            if self.chess_board[r, c] == 0:
-                return False
-            if self.chess_board[r, c] == player:
-                return len(captured) > 0
-            captured.append((r, c))
-            r += dx
-            c += dy
-
-        return False
-
-    def execute_move(self, move_pos, player):
-        """
-        Execute the move and flip the opponent's discs accordingly.
-
-        Parameters
-        ----------
-        move_pos : tuple
-            The position where the player places the disc
-        player : int
-            The current player (1: Black, 2: White)
-        """
-        r, c = move_pos
-        self.chess_board[r, c] = player
-
-        # Flip opponent's discs in all directions where captures occur
-        for direction in self.get_directions():
-            if self.check_capture(move_pos, player, direction):
-                self.flip_discs(move_pos, player, direction)
-
-    def flip_discs(self, move_pos, player, direction):
-        """
-        Flip the discs in the specified direction.
-
-        Parameters
-        ----------
-        move_pos : tuple
-            The position where the player places the disc
-        player : int
-            The current player (1: Black, 2: White)
-        direction : tuple
-            The direction to check (dx, dy)
-        """
-        r, c = move_pos
-        dx, dy = direction
-        r += dx
-        c += dy
-
-        while self.chess_board[r, c] != player:
-            self.chess_board[r, c] = player
-            r += dx
-            c += dy
-
-    def check_endgame(self):
-        """
-        Check if the game ends and compute the final score.
-
-        Returns
-        -------
-        is_endgame : bool
-            Whether the game ends.
-        player_1_score : int
-            The score of player 1.
-        player_2_score : int
-            The score of player 2.
-        """
-        if not np.any(self.chess_board == 0):  # No empty spaces left
-            p0_score = np.sum(self.chess_board == 1)
-            p1_score = np.sum(self.chess_board == 2)
-            return True, p0_score, p1_score
-
-        return False, np.sum(self.chess_board == 1), np.sum(self.chess_board == 2)
-
-    def get_directions(self):
-        """
-        Get all directions (8 directions: up, down, left, right, and diagonals)
-
-        Returns
-        -------
-        list of tuple
-            List of direction vectors
-        """
-        return [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
-
-    def random_move(self, player):
-        """
-        Randomly select a valid move.
-
-        Parameters
-        ----------
-        player : int
-            The current player (1: Black, 2: White)
-
-        Returns
-        -------
-        tuple
-            The position to place the disc
-        """
-        valid_moves = []
-        for r in range(self.board_size):
-            for c in range(self.board_size):
-                if self.is_valid_move((r, c), player):
-                    valid_moves.append((r, c))
-        
-        """
-        """
-        #### 
-        if len(valid_moves) == 0:
-            # If no valid moves are available, return None
-            print(f"No valid moves left for player {player}.")
-            return None
-        
-
-        
-        
-        return valid_moves[np.random.randint(0, len(valid_moves))]
 
     def get_current_agent(self):
         """
@@ -418,7 +236,6 @@ class World:
         """
         self.ui_engine.render(self.chess_board, debug=debug)
         sleep(self.display_delay)
-
 
 if __name__ == "__main__":
     world = World()
