@@ -1,7 +1,9 @@
 import numpy as np
+
 from agents.agent import Agent
-from store import register_agent
 from helpers import random_move
+from store import register_agent
+
 
 # Important: you should register your agent with a name
 @register_agent("random_agent")
@@ -34,5 +36,5 @@ class RandomAgent(Agent):
         move_pos : tuple of int
             The position (x, y) where the player places the disc.
         """
-        
-        return random_move(chess_board,player)
+
+        return random_move(chess_board, player)

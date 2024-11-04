@@ -143,6 +143,15 @@ def check_endgame(chess_board,player,opponent):
     return is_endgame, p0_score, p1_score
 
 def get_valid_moves(chess_board,player):
+    """
+    Get all valid moves given the chess board and player.
+
+    Returns
+
+    -------
+    valid_moves : [(tuple)]
+
+    """
 
     board_size = chess_board.shape[0]
     valid_moves = []
@@ -154,6 +163,16 @@ def get_valid_moves(chess_board,player):
     return valid_moves
 
 def random_move(chess_board, player):
+    """
+    random move from the list of valid moves.
+
+    Returns
+
+    ------
+    (tuple)
+
+
+    """
 
     valid_moves = get_valid_moves(chess_board,player)
 
