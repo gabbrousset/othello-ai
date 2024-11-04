@@ -167,6 +167,7 @@ class World:
         if not valid_moves:
             logger.info(f"Player {self.player_names[self.turn]} must pass due to having no valid moves.")
         else:
+            time_taken = None
             try:
                 # Run the agent's step function
                 start_time = time()
