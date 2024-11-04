@@ -42,7 +42,7 @@ python simulator.py --player_1 human_agent --player_2 random_agent --display
 
 ## Autoplaying multiple games
 
-There is some randomness (coming from the initial game setup and potentially agent logic), so to fairly evaluate agents, we will run them against eachother multiple times, alternating their roles as player_1 and player_2, and on boards are drawn randomly (between size 6 and 12). The aggregate win % will determine a fair winner. Use the `--autoplay` flag to run $n$ games sequentially, where $n$ can be set using `--autoplay_runs`.
+There is some randomness (coming from the initial game setup and potentially agent logic), so to fairly evaluate agents, we will run them against eachother multiple times, alternating their roles as player_1 and player_2, on various board sizes that are selected randomly (between size 6 and 12). The aggregate win % will determine a fair winner. Use the `--autoplay` flag to run $n$ games sequentially, where $n$ can be set using `--autoplay_runs`.
 
 ```bash
 python simulator.py --player_1 random_agent --player_2 random_agent --autoplay
