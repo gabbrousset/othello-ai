@@ -48,6 +48,9 @@ class Simulator:
 
     def __init__(self, args):
         self.args = args
+        # Only play on even-sized boards
+        self.valid_board_sizes = [ i for i in range(self.args.board_size_min, self.args.board_size_max+1) if i % 2 == 0 ]
+        #print("Valid sizes: ",self.valid_board_sizes)
 
     def reset(self, swap_players=False, board_size=None):
         """
@@ -84,7 +87,7 @@ class Simulator:
         while not is_end:
             is_end, p0_score, p1_score = self.world.step()
         logger.info(
-            f"Run finished. Player {PLAYER_1_NAME}: {p0_score}, Player {PLAYER_2_NAME}: {p1_score}"
+            f"Run finished. {PLAYER_1_NAME} player, agent {self.args.player_1}: {p0_score}. {PLAYER_2_NAME}, agent {self.args.player_2}: {p1_score}"
         )
         return p0_score, p1_score, self.world.p0_time, self.world.p1_time
 
@@ -102,7 +105,7 @@ class Simulator:
         with all_logging_disabled():
             for i in range(self.args.autoplay_runs):
                 swap_players = i % 2 == 0
-                board_size = np.random.randint(self.args.board_size_min, self.args.board_size_max)
+                board_size = self.valid_board_sizes[ np.random.randint(len(self.valid_board_sizes)) ] 
                 p0_score, p1_score, p0_time, p1_time = self.run(
                     swap_players=swap_players, board_size=board_size
                 )
@@ -118,16 +121,16 @@ class Simulator:
                 elif p0_score < p1_score:
                     p2_win_count += 1
                 else:  # Tie
-                    p1_win_count += 1
-                    p2_win_count += 1
+                    p1_win_count += 0.5
+                    p2_win_count += 0.5
                 p1_times.extend(p0_time)
                 p2_times.extend(p1_time)
 
         logger.info(
-            f"Player {PLAYER_1_NAME} win percentage: {p1_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p1_times),5)} seconds."
+            f"Player 1, agent {self.args.player_1}, win percentage: {p1_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p1_times),5)} seconds."
         )
         logger.info(
-            f"Player {PLAYER_2_NAME} win percentage: {p2_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p2_times),5)} seconds."
+            f"Player 2, agent {self.args.player_2}, win percentage: {p2_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p2_times),5)} seconds."
         )
 
         """
