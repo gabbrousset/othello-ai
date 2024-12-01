@@ -1,4 +1,5 @@
-# Student agent: Add your own agent here
+import copy
+
 from agents.agent import Agent
 from store import register_agent
 import sys
@@ -9,41 +10,89 @@ from helpers import random_move, count_capture, execute_move, check_endgame, get
 
 @register_agent("agent0")
 class Agent0(Agent):
-  """
-  A class for your implementation. Feel free to use this class to
-  add any helper functionalities needed for your agent.
-  """
-
-  def __init__(self):
-    super(Agent0, self).__init__()
-    self.name = "Agent0"
-
-  def step(self, chess_board, player, opponent):
     """
-    Implement the step function of your agent here.
-    You can use the following variables to access the chess board:
-    - chess_board: a numpy array of shape (board_size, board_size)
-      where 0 represents an empty spot, 1 represents Player 1's discs (Blue),
-      and 2 represents Player 2's discs (Brown).
-    - player: 1 if this agent is playing as Player 1 (Blue), or 2 if playing as Player 2 (Brown).
-    - opponent: 1 if the opponent is Player 1 (Blue), or 2 if the opponent is Player 2 (Brown).
-
-    You should return a tuple (r,c), where (r,c) is the position where your agent
-    wants to place the next disc. Use functions in helpers to determine valid moves
-    and more helpful tools.
-
-    Please check the sample implementation in agents/random_agent.py or agents/human_agent.py for more details.
+    A class for your implementation. Feel free to use this class to
+    add any helper functionalities needed for your agent.
     """
 
-    # Some simple code to help you with timing. Consider checking 
-    # time_taken during your search and breaking with the best answer
-    # so far when it nears 2 seconds.
-    start_time = time.time()
-    time_taken = time.time() - start_time
+    def __init__(self):
+        super(Agent0, self).__init__()
+        self.name = "Agent0"
 
-    print("My AI's turn took ", time_taken, "seconds.")
+        self.corners = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
+        self.x_squares = [(1, 1), (1, -2), (-2, 1), (-2, -2)]
+        self.c_squares = [(0, 1), (0, -2), (1, 0), (1, -1), (-2, 0), (-2, -1), (-1, 1), (-1, -2)]
 
-    # Dummy return (you should replace this with your actual logic)
-    # Returning a random valid move as an example
-    return random_move(chess_board,player)
+    def step(self, board, player, opponent):
+        """
+        Parameters
+        ----------
+        board : numpy.ndarray of shape (board_size, board_size)
+            The board with 0 representing an empty space, 1 for black (Player 1),
+            and 2 for white (Player 2).
+        player : int
+            The current player (1 for black, 2 for white).
+        opponent : int
+            The opponent player (1 for black, 2 for white).
+
+        Returns
+        -------
+        move_pos : tuple of int
+            The position (x, y) where the player places the disc.
+        """
+
+        # Some simple code to help you with timing. Consider checking
+        # time_taken during your search and breaking with the best answer
+        # so far when it nears 2 seconds.
+        start_time = time.time()
+
+        best_score = float('-inf')
+        best_move = None
+
+        valid_moves = get_valid_moves(board, player)
+
+        for move in valid_moves:
+            simulated_board = copy.deepcopy(board)
+            score = 0
+
+            # n_flipped = count_capture(simulated_board, move, player)
+            # score -= n_flipped
+
+            execute_move(simulated_board, move, player)
+
+            score += self.evaluate(simulated_board, player, opponent)
+
+            if score > best_score:
+                best_score = score
+                best_move = move
+
+        time_taken = time.time() - start_time
+
+        return best_move
+
+    def evaluate(self, board, player, opponent):
+        score = 0
+
+        for square in self.x_squares:
+            disc = board[square]
+            if disc == player:
+                score -= 10
+            elif disc == opponent:
+                score += 10
+
+        for square in self.c_squares:
+            disc = board[square]
+            if disc == player:
+                score -= 3
+            elif disc == opponent:
+                score += 3
+
+        for square in self.corners:
+            disc = board[square]
+            if disc == player:
+                score += 25
+            elif disc == opponent:
+                score -= 25
+
+        return score
 
