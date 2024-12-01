@@ -93,7 +93,7 @@ class AB_Agent(Agent):
 
         for move in moves:
             new_board = deepcopy(board)
-            execute_move(board, move, player)
+            execute_move(new_board, move, player)
 
             value = -self.alpha_beta(new_board, depth - 1, -beta, -alpha, opponent, player)
 
