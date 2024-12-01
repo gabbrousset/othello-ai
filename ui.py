@@ -154,14 +154,14 @@ class UIEngine:
             plt.figtext(
                 0.5,
                 0.1,
-                f"Scores: Blue: [{self.world.results_cache[1]}], Brown: [{self.world.results_cache[2]}]",
+                f"Scores: Black: [{self.world.results_cache[1]}], White: [{self.world.results_cache[2]}]",
                 horizontalalignment="left",
             )
             if self.world.results_cache[0]:
                 if self.world.results_cache[1] > self.world.results_cache[2]:
-                    win_player = "Blue wins!"
+                    win_player = "Black wins!"
                 elif self.world.results_cache[1] < self.world.results_cache[2]:
-                    win_player = "Brown wins!"
+                    win_player = "White wins!"
                 else:
                     win_player = "It is a Tie!"
 
