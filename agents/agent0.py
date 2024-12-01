@@ -76,23 +76,25 @@ class Agent0(Agent):
         for square in self.x_squares:
             disc = board[square]
             if disc == player:
-                score -= 10
+                score -= 50
             elif disc == opponent:
-                score += 10
+                score += 50
 
         for square in self.c_squares:
             disc = board[square]
             if disc == player:
-                score -= 3
+                score -= 30
             elif disc == opponent:
-                score += 3
+                score += 30
 
         for square in self.corners:
             disc = board[square]
             if disc == player:
-                score += 25
+                score += 100
             elif disc == opponent:
-                score -= 25
+                score -= 100
+
+        score -= len(get_valid_moves(board, opponent)) * 10
 
         return score
 
