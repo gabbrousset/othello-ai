@@ -7,16 +7,19 @@ import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
 
 
-@register_agent("agent0")
-class Agent0(Agent):
+@register_agent("ab_agent")
+class AB_Agent(Agent):
     """
     A class for your implementation. Feel free to use this class to
     add any helper functionalities needed for your agent.
     """
 
     def __init__(self):
-        super(Agent0, self).__init__()
-        self.name = "Agent0"
+        super(AB_Agent, self).__init__()
+        self.name = "AB_Agent"
+        self.time_limit = 1.9
+
+        self.transposition_table = {}
 
         self.corners = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
         self.x_squares = [(1, 1), (1, -2), (-2, 1), (-2, -2)]
@@ -45,29 +48,61 @@ class Agent0(Agent):
         # so far when it nears 2 seconds.
         start_time = time.time()
 
-        best_score = float('-inf')
+        moves = get_valid_moves(board, player)
         best_move = None
 
-        valid_moves = get_valid_moves(board, player)
+        depth = 3
+        alpha = float('-inf')
+        beta = float('inf')
 
-        for move in valid_moves:
-            simulated_board = deepcopy(board)
-            score = 0
+        best_value = float('-inf')
 
-            # n_flipped = count_capture(simulated_board, move, player)
-            # score -= n_flipped
+        for move in moves:
+            new_board = deepcopy(board)
+            execute_move(new_board, move, player)
 
-            execute_move(simulated_board, move, player)
+            value = -self.alpha_beta(new_board, depth - 1, -beta, -alpha, opponent, player)
 
-            score += self.evaluate(simulated_board, player, opponent)
-
-            if score > best_score:
-                best_score = score
+            if value > best_value:
+                best_value = value
                 best_move = move
+                alpha = max(alpha, value)
 
         time_taken = time.time() - start_time
 
+        # Dummy return (you should replace this with your actual logic)
+        # Returning a random valid move as an example
         return best_move
+
+    def alpha_beta(self, board, depth, alpha, beta, player, opponent):
+        """
+        Returns an eval_score
+        """
+        is_endgame, p1_score, p2_score = check_endgame(board, player, opponent)
+
+        if is_endgame:
+            return self.evaluate_endgame(p1_score, p2_score, player)
+
+        if depth == 0:
+            return self.evaluate(board, player, opponent)
+
+        moves = get_valid_moves(board, player)
+
+        if not moves:
+            return -self.alpha_beta(board, depth - 1, -beta, -alpha, opponent, player)
+
+        for move in moves:
+            new_board = deepcopy(board)
+            execute_move(board, move, player)
+
+            value = -self.alpha_beta(new_board, depth - 1, -beta, -alpha, opponent, player)
+
+            alpha = max(alpha, value)
+
+            if alpha >= beta:
+                break
+
+        return alpha
 
     def evaluate(self, board, player, opponent):
         score = 0
@@ -96,4 +131,9 @@ class Agent0(Agent):
         score -= len(get_valid_moves(board, opponent)) * 10
 
         return score
+
+    def evaluate_endgame(self, p1_score, p2_score, player):
+        if player == 1:
+            return p1_score - p2_score
+        return p2_score - p1_score
 
