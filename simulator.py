@@ -4,6 +4,7 @@ from utils import all_logging_disabled
 import logging
 import numpy as np
 import datetime
+from tqdm import tqdm
 
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
@@ -103,7 +104,7 @@ class Simulator:
             logger.warning("Since running autoplay mode, display will be disabled")
         self.args.display = False
         with all_logging_disabled():
-            for i in range(self.args.autoplay_runs):
+            for i in tqdm(range(self.args.autoplay_runs)):
                 swap_players = i % 2 == 0
                 board_size = self.valid_board_sizes[ np.random.randint(len(self.valid_board_sizes)) ] 
                 p0_score, p1_score, p0_time, p1_time = self.run(
