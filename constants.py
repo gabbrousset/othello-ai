@@ -10,7 +10,7 @@ AGENT_NOT_FOUND_MSG = (
 
 PLAYER_1_ID = 0
 PLAYER_2_ID = 1
-PLAYER_1_NAME = "Blue"
-PLAYER_2_NAME = "Brown"
-PLAYER_1_COLOR = "tab:blue"  # Black is traditionally used for Player 1
-PLAYER_2_COLOR = "tab:brown"  # White is traditionally used for Player 2
+PLAYER_1_NAME = "Black"
+PLAYER_2_NAME = "White"
+PLAYER_1_COLOR = "k"  # Black is traditionally used for Player 1
+PLAYER_2_COLOR = "0.8"  # White is traditionally used for Player 2
