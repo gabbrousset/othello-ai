@@ -127,7 +127,12 @@ class Simulator:
                 p1_times.extend(p0_time)
                 p2_times.extend(p1_time)
 
-                print(f'{i} score: {self.args.player_1} {p1_win_count} - {p2_win_count} {self.args.player_2}')
+                print_color = '\033[97;43m'
+                if p1_win_count > p2_win_count:
+                    print_color = '\033[97;42m'
+                elif p2_win_count > p1_win_count:
+                    print_color = '\033[97;41m'
+                print(f'{print_color}{i} score: {self.args.player_1} {p1_win_count} - {p2_win_count} {self.args.player_2}', '\033[0m')
 
         logger.info(
             f"Player 1, agent {self.args.player_1}, win percentage: {p1_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p1_times),5)} seconds."
