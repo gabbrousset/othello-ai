@@ -4,6 +4,7 @@ from utils import all_logging_disabled
 import logging
 import numpy as np
 import datetime
+from tqdm import tqdm
 
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
@@ -103,7 +104,7 @@ class Simulator:
             logger.warning("Since running autoplay mode, display will be disabled")
         self.args.display = False
         with all_logging_disabled():
-            for i in range(self.args.autoplay_runs):
+            for i in tqdm(range(self.args.autoplay_runs)):
                 swap_players = i % 2 == 0
                 board_size = self.valid_board_sizes[ np.random.randint(len(self.valid_board_sizes)) ] 
                 p0_score, p1_score, p0_time, p1_time = self.run(
@@ -125,6 +126,8 @@ class Simulator:
                     p2_win_count += 0.5
                 p1_times.extend(p0_time)
                 p2_times.extend(p1_time)
+
+                print(f'{i} score: {self.args.player_1} {p1_win_count} - {p2_win_count} {self.args.player_2}')
 
         logger.info(
             f"Player 1, agent {self.args.player_1}, win percentage: {p1_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p1_times),5)} seconds."
