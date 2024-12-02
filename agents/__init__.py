@@ -5,3 +5,4 @@ from .gpt_greedy_corners_agent import StudentAgent
 from .agent0 import Agent0
 from .agent1 import Agent1
 from .ab_agent import AB_Agent
+from .ab_mo_agent import AB_MO_Agent
