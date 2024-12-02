@@ -1,5 +1,3 @@
-import copy
-
 from agents.agent import Agent
 from store import register_agent
 import sys
@@ -7,6 +5,7 @@ import numpy as np
 from copy import deepcopy
 import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
+
 
 @register_agent("agent0")
 class Agent0(Agent):
@@ -52,7 +51,7 @@ class Agent0(Agent):
         valid_moves = get_valid_moves(board, player)
 
         for move in valid_moves:
-            simulated_board = copy.deepcopy(board)
+            simulated_board = deepcopy(board)
             score = 0
 
             # n_flipped = count_capture(simulated_board, move, player)
