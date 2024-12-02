@@ -1,7 +1,4 @@
 # Student agent: Add your own agent here
-from numpy.matlib import empty
-from pkg_resources import non_empty_lines
-
 from agents.agent import Agent
 from store import register_agent
 import sys
@@ -98,7 +95,7 @@ class SecondAgent(Agent):
         if board[r, c] == opponent: # elif or if??
             score -= 100000
 
-        if board[r, c] == empty:  # Empty corner, adjacency is risky        # elif or if??
+        if board[r, c] == 0:  # Empty corner, adjacency is risky        # elif or if??
             # check if we are on a tile adjacent to a corner
             # adjacent to top left -> hardcode instead of r,c?
             if (r, c) == (0, 0):
