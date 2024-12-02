@@ -17,13 +17,18 @@ class AB_Agent(Agent):
     def __init__(self):
         super(AB_Agent, self).__init__()
         self.name = "AB_Agent"
-        self.time_limit = 1.9
+
+        self.start_time = None
+        self.time_limit = .3
 
         self.transposition_table = {}
 
         self.corners = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
         self.x_squares = [(1, 1), (1, -2), (-2, 1), (-2, -2)]
         self.c_squares = [(0, 1), (0, -2), (1, 0), (1, -1), (-2, 0), (-2, -1), (-1, 1), (-1, -2)]
+
+    def has_time_left(self):
+        return time.time() - self.start_time < self.time_limit
 
     def step(self, board, player, opponent):
         """
@@ -46,16 +51,29 @@ class AB_Agent(Agent):
         # Some simple code to help you with timing. Consider checking
         # time_taken during your search and breaking with the best answer
         # so far when it nears 2 seconds.
-        start_time = time.time()
+        self.start_time = time.time()
 
-        moves = get_valid_moves(board, player)
         best_move = None
 
-        depth = 3
+        depth = 1
+        while self.has_time_left():
+            try:
+                best_move = self.ids(board, player, opponent, depth)
+                depth += 1
+            except TimeoutError:
+                break
+
+        time_taken = time.time() - self.start_time
+        print('time taken:', time_taken, 'at depth:', depth)
+
+        return best_move
+
+    def ids(self, board, player, opponent, depth):
+        moves = get_valid_moves(board, player)
+        best_move = None
+        best_value = float('-inf')
         alpha = float('-inf')
         beta = float('inf')
-
-        best_value = float('-inf')
 
         for move in moves:
             new_board = deepcopy(board)
@@ -66,18 +84,16 @@ class AB_Agent(Agent):
             if value > best_value:
                 best_value = value
                 best_move = move
-                alpha = max(alpha, value)
 
-        time_taken = time.time() - start_time
-
-        # Dummy return (you should replace this with your actual logic)
-        # Returning a random valid move as an example
         return best_move
 
     def alpha_beta(self, board, depth, alpha, beta, player, opponent):
         """
         Returns an eval_score
         """
+        if not self.has_time_left():
+            raise TimeoutError
+
         is_endgame, p1_score, p2_score = check_endgame(board, player, opponent)
 
         if is_endgame:
@@ -134,6 +150,6 @@ class AB_Agent(Agent):
 
     def evaluate_endgame(self, p1_score, p2_score, player):
         if player == 1:
-            return p1_score - p2_score
-        return p2_score - p1_score
+            return (p1_score - p2_score) * 1000
+        return (p2_score - p1_score) * 1000
 
