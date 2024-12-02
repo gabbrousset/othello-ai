@@ -7,7 +7,7 @@ from copy import deepcopy
 import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
 
-@register_agent("second_agent")
+@register_agent("agent1")
 class SecondAgent(Agent):
   """
   A class for your implementation. Feel free to use this class to
@@ -42,9 +42,10 @@ class SecondAgent(Agent):
     board_length = len(chess_board)-1
     valid_moves = get_valid_moves(chess_board, player)
 
-    if not valid_moves:
+    # worst case it returns None and a random move will be executed
+    #if not valid_moves:
       # Returning a random valid move as an example
-      return random_move(chess_board, player)
+      #return random_move(chess_board, player)
 
     # initialize
     best_move = None
@@ -69,9 +70,9 @@ class SecondAgent(Agent):
 
     # Dummy return (you should replace this with your actual logic)
     # Returning a random valid move as an example
-    if best_move is None:
+    #if best_move is None:
       # Returning a random valid move as an example
-      return random_move(chess_board, player)
+      #return random_move(chess_board, player)
 
     return best_move
 
@@ -99,7 +100,7 @@ class SecondAgent(Agent):
             # check if we are on a tile adjacent to a corner
             # adjacent to top left -> hardcode instead of r,c?
             if (r, c) == (0, 0):
-                if board[r + 1, c] == player or board[r + 1, c + 1] == player or board[r, c + 1] == player:
+                if board[r + 1, c] == player or board[r + 1, c + 1] == player or board[r, c + 1] == player:     # x squares are the worst
                     score -= 5000
 
             # adjacent to top right
@@ -136,8 +137,8 @@ class SecondAgent(Agent):
 
 
     # count how many pieces we captured
-    captured_pieces = count_capture(board, move, player)
-    score += captured_pieces*500 # or 1000
+    #captured_pieces = count_capture(board, move, player)
+    #score += captured_pieces*50 # or 1000
 
     # check what move could follow this move
 
