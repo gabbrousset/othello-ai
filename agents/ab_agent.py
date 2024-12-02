@@ -63,8 +63,8 @@ class AB_Agent(Agent):
             except TimeoutError:
                 break
 
-        time_taken = time.time() - self.start_time
-        print('time taken:', time_taken, 'at depth:', depth)
+        # time_taken = time.time() - self.start_time
+        # print('time taken:', time_taken, 'at depth:', depth)
 
         return best_move
 
