@@ -23,9 +23,25 @@ class AB_MO_Agent(Agent):
 
         self.transposition_table = {}
 
-        self.corners = [(0, 0), (0, -1), (-1, 0), (-1, -1)]
-        self.x_squares = [(1, 1), (1, -2), (-2, 1), (-2, -2)]
-        self.c_squares = [(0, 1), (0, -2), (1, 0), (1, -1), (-2, 0), (-2, -1), (-1, 1), (-1, -2)]
+        self.first_run = True
+        self.M = None
+        
+        self.corners = []
+        self.x_squares = []
+        self.c_squares = []
+        self.edges_close = []
+        self.center_corners = []
+        
+        self.weights = None
+        self.normal_w = -5
+        self.corner_w = 100
+        self.x_square_w = -50
+        self.c_square_w = -30
+        self.edge_w = 5
+        self.edge_close_w = 20
+        self.inner_center_w = 5
+        self.center_w = 3
+        self.center_corner_w = 15
 
     def has_time_left(self):
         return time.time() - self.start_time < self.time_limit
@@ -53,6 +69,23 @@ class AB_MO_Agent(Agent):
         # so far when it nears 2 seconds.
         self.start_time = time.time()
 
+        if self.first_run:
+            self.first_run = False
+            
+            dimensions = board.shape
+            self.M = dimensions[0]
+            last_idx = self.M - 1
+            
+            self.corners = {(0, 0), (0, last_idx), (last_idx, 0), (last_idx, last_idx)}
+            self.x_squares = {(1, 1), (1, self.M - 2), (self.M - 2, 1), (self.M - 2, self.M - 2)}
+            self.c_squares = {(0, 1), (0, self.M - 2), (1, 0), (1, last_idx), (self.M - 2, 0),
+                              (self.M - 2, last_idx), (last_idx, 1), (last_idx, self.M - 2)}
+            self.edges_close = {(0, 2), (0, self.M - 3), (2, 0), (2, last_idx), (self.M - 3, 0),
+                              (self.M - 3, last_idx), (last_idx, 2), (last_idx, self.M - 3)}
+            self.center_corners = {(2, 2), (2, self.M -3), (self.M - 3, 2), (self.M - 3, self.M - 3)}
+
+            self.initialize_weights(dimensions)
+
         best_move = None
 
         depth = 1
@@ -63,25 +96,56 @@ class AB_MO_Agent(Agent):
             except TimeoutError:
                 break
 
-        # time_taken = time.time() - self.start_time
-        # print('ab_mo time taken:', time_taken, 'at depth:', depth)
+        time_taken = time.time() - self.start_time
+        print('ab_mo time taken:', time_taken, 'at depth:', depth)
 
         return best_move
+    
+    def initialize_weights(self, dimensions):
+        # set edges
+        self.weights = np.full(dimensions, self.edge_w)
+        # set inner values of rows, columns
+        self.weights[1:-1, 1:-1] = self.normal_w
 
-    def get_ordered_moves(self, board, player, opponent):
+        # 6x6 = [2, 4] =   [2, M-2]
+        # 8x8 = [2, 6] =   [2, M-2]
+        # 10x10 = [4, 6] = [4, M-4]
+        # 12x12 = [4, 8] = [4, M-4]
+        self.weights[2:self.M - 2, 2:self.M - 2] = self.center_w
+        if self.M > 7:
+            for center_corner in self.center_corners:
+                self.weights[center_corner] = self.center_corner_w
+
+            if self.M > 9:
+                self.weights[4:self.M-4, 4:self.M-4] = self.inner_center_w
+
+        for corner in self.corners:
+            self.weights[corner] = self.corner_w
+
+        for x_square in self.x_squares:
+            self.weights[x_square] = self.x_square_w
+
+        for c_square in self.c_squares:
+            self.weights[c_square] = self.c_square_w
+
+        if self.M > 6:
+            for edge_close in self.edges_close:
+                self.weights[edge_close] = self.edge_close_w
+
+    def get_ordered_moves(self, board, player):
         moves = get_valid_moves(board, player)
         # using enum to avoid comparing moves (i think its faster)
-        move_scores = [(self.score_move(board, move, player, opponent), i, move) for i, move in enumerate(moves)]
+        move_scores = [(self.score_move(board, move, player), i, move) for i, move in enumerate(moves)]
         move_scores.sort(reverse=True)
         return [move for score, i, move in move_scores]
 
-    def score_move(self, board, move, player, opponent):
-        new_board = deepcopy(board)
-        execute_move(new_board, move, player)
-        return self.evaluate(new_board, player, opponent)
+    def score_move(self, board, move, player):
+        score = self.weights[move]
+        # score += count_capture(board, move, player) * 3
+        return score
 
     def ids(self, board, player, opponent, depth):
-        moves = self.get_ordered_moves(board, player, opponent)
+        moves = self.get_ordered_moves(board, player)
         best_move = None
         best_value = float('-inf')
         alpha = float('-inf')
@@ -114,7 +178,7 @@ class AB_MO_Agent(Agent):
         if depth == 0:
             return self.evaluate(board, player, opponent)
 
-        moves = self.get_ordered_moves(board, player, opponent)
+        moves = self.get_ordered_moves(board, player)
 
         if not moves:
             return -self.alpha_beta(board, depth - 1, -beta, -alpha, opponent, player)
