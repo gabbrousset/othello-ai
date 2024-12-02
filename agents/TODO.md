@@ -29,6 +29,8 @@ ideas:
   - game stage detection (early game, mid-game, endgame)
     - changes weights and evaluations
   - fixed sized data structure (lru) that cycles off the end
+  - undo move function instead of copy
+  - localized functions instead of helper imports
 
 - heuristic:
   - stable nodes
