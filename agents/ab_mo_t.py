@@ -4,7 +4,7 @@ import sys
 import numpy as np
 from copy import deepcopy
 import time
-from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
+from helpers import count_capture, execute_move, check_endgame, get_valid_moves
 
 
 @register_agent("ab_mo_t")
@@ -150,9 +150,10 @@ class AB_MO_T(Agent):
         best_value = float('-inf')
         alpha = float('-inf')
         beta = float('inf')
+        new_board = np.empty_like(board)
 
         for move in moves:
-            new_board = deepcopy(board)
+            np.copyto(new_board, board)
             execute_move(new_board, move, player)
 
             value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
@@ -183,8 +184,10 @@ class AB_MO_T(Agent):
         if not moves:
             return -self.alpha_beta_negamax(board, depth - 1, -beta, -alpha, opponent, player)
 
+        new_board = np.empty_like(board)
+
         for move in moves:
-            new_board = deepcopy(board)
+            np.copyto(new_board, board)
             execute_move(new_board, move, player)
 
             value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
@@ -224,12 +227,8 @@ class AB_MO_T(Agent):
 
         return score
 
-    # def evaluate_endgame(self, p1_score, p2_score, player):
-    #     if player == 1:
-    #         return (p1_score - p2_score) * 1000
-    #     return (p2_score - p1_score) * 1000
-
     def evaluate_endgame(self, p1_score, p2_score, player):
+        # not returning infinite values because i get errors when comparing in negamax
         if player == 1:
-            return float('inf') if p1_score > p2_score else float('-inf')
-        return float('inf') if p2_score > p1_score else float('-inf')
+            return (p1_score - p2_score) << 17  # shifting bc i think its faster than multiplying
+        return (p2_score - p1_score) << 17
