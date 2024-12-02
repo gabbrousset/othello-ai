@@ -64,7 +64,7 @@ class AB_Agent(Agent):
                 break
 
         # time_taken = time.time() - self.start_time
-        # print('time taken:', time_taken, 'at depth:', depth)
+        # print('ab time taken:', time_taken, 'at depth:', depth)
 
         return best_move
 
