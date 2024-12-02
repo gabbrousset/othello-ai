@@ -155,7 +155,7 @@ class AB_MO_Agent(Agent):
             new_board = deepcopy(board)
             execute_move(new_board, move, player)
 
-            value = -self.alpha_beta(new_board, depth - 1, -beta, -alpha, opponent, player)
+            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
 
             if value > best_value:
                 best_value = value
@@ -163,7 +163,7 @@ class AB_MO_Agent(Agent):
 
         return best_move
 
-    def alpha_beta(self, board, depth, alpha, beta, player, opponent):
+    def alpha_beta_negamax(self, board, depth, alpha, beta, player, opponent):
         """
         Returns an eval_score
         """
@@ -181,13 +181,13 @@ class AB_MO_Agent(Agent):
         moves = self.get_ordered_moves(board, player)
 
         if not moves:
-            return -self.alpha_beta(board, depth - 1, -beta, -alpha, opponent, player)
+            return -self.alpha_beta_negamax(board, depth - 1, -beta, -alpha, opponent, player)
 
         for move in moves:
             new_board = deepcopy(board)
             execute_move(new_board, move, player)
 
-            value = -self.alpha_beta(new_board, depth - 1, -beta, -alpha, opponent, player)
+            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
 
             alpha = max(alpha, value)
 
