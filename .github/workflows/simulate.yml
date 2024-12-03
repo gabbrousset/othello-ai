@@ -1,0 +1,46 @@
+# This is a basic workflow that is manually triggered
+
+name: Run simulate.py
+
+# Controls when the action will run. Workflow runs when manually triggered using the UI
+# or API.
+on:
+  # Inputs the workflow accepts.
+  workflow_dispatch:
+    inputs:
+      player_1_name:
+        description: 'select agent 1'
+        required: true
+        default: 'student_agent'
+      player_2_name:
+        description: 'select agent 2'
+        required: false
+        default: 'gpt_greedy_corners_agent'
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  simulate:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10.6'
+        
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
+    - name: Set agent 1
+      run: echo "player_1_name=${{ github.event.inputs.player_1_name }}" >> $GITHUB_ENV
+
+    - name: Set agent 2
+      run: echo "player_2_name=${{ github.event.inputs.player_2_name }}" >> $GITHUB_ENV
+
+    - name: Running simulate.py
+      run: python simulator.py --player_1 ${{ env.player_1_name }} --player_2 ${{ env.player_2_name }} --board_size 8 --autoplay --autoplay_runs 25

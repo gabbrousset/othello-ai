@@ -4,7 +4,7 @@ from utils import all_logging_disabled
 import logging
 import numpy as np
 import datetime
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
@@ -104,30 +104,36 @@ class Simulator:
             logger.warning("Since running autoplay mode, display will be disabled")
         self.args.display = False
         with all_logging_disabled():
-            for i in tqdm(range(self.args.autoplay_runs)):
-                swap_players = i % 2 == 0
-                board_size = self.valid_board_sizes[ np.random.randint(len(self.valid_board_sizes)) ] 
-                p0_score, p1_score, p0_time, p1_time = self.run(
-                    swap_players=swap_players, board_size=board_size
-                )
-                if swap_players:
-                    p0_score, p1_score, p0_time, p1_time = (
-                        p1_score,
-                        p0_score,
-                        p1_time,
-                        p0_time,
+            with trange(self.args.autoplay_runs) as t:
+                for i in t:
+                    swap_players = i % 2 == 0
+                    board_size = self.valid_board_sizes[ np.random.randint(len(self.valid_board_sizes)) ]
+                    p0_score, p1_score, p0_time, p1_time = self.run(
+                        swap_players=swap_players, board_size=board_size
                     )
-                if p0_score > p1_score:
-                    p1_win_count += 1
-                elif p0_score < p1_score:
-                    p2_win_count += 1
-                else:  # Tie
-                    p1_win_count += 0.5
-                    p2_win_count += 0.5
-                p1_times.extend(p0_time)
-                p2_times.extend(p1_time)
+                    if swap_players:
+                        p0_score, p1_score, p0_time, p1_time = (
+                            p1_score,
+                            p0_score,
+                            p1_time,
+                            p0_time,
+                        )
+                    if p0_score > p1_score:
+                        p1_win_count += 1
+                    elif p0_score < p1_score:
+                        p2_win_count += 1
+                    else:  # Tie
+                        p1_win_count += 0.5
+                        p2_win_count += 0.5
+                    p1_times.extend(p0_time)
+                    p2_times.extend(p1_time)
 
-                print(f'{i} score: {self.args.player_1} {p1_win_count} - {p2_win_count} {self.args.player_2}')
+                    # print_color = '\033[97;43m'
+                    # if p1_win_count > p2_win_count:
+                    #     print_color = '\033[97;42m'
+                    # elif p2_win_count > p1_win_count:
+                    #     print_color = '\033[97;41m'
+                    t.set_description_str(f'{self.args.player_1} {p1_win_count} - {p2_win_count} {self.args.player_2}')
 
         logger.info(
             f"Player 1, agent {self.args.player_1}, win percentage: {p1_win_count / self.args.autoplay_runs}. Maximum turn time was {np.round(np.max(p1_times),5)} seconds."
