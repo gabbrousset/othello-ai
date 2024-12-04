@@ -7,3 +7,4 @@ from .agent1 import Agent1
 from .ab_agent import AB_Agent
 from .minimaxAB_agent import ThirdAgent
 from .ab_mo_agent import AB_MO_Agent
+from .ab_mo_t import AB_MO_T
