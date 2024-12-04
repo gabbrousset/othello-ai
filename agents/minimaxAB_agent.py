@@ -18,6 +18,8 @@ class ThirdAgent(Agent):
     super(ThirdAgent, self).__init__()
     self.name = "ThirdAgent"
 
+  
+
   def step(self, chess_board, player, opponent):
     """
     Implement the step function of your agent here.
@@ -38,29 +40,29 @@ class ThirdAgent(Agent):
     # time_taken during your search and breaking with the best answer
     # so far when it nears 2 seconds.
     start_time = time.time()
+    max_time = 0.5
 
     # game stage
-    occupied_tiles = 0
-    for row in chess_board:
-        for cell in row:
-            occupied_tiles += cell != 0
+    occupied_tiles = sum(cell != 0 for row in chess_board for cell in row)
     # occupied_tiles = sum(sum(row) != 0 for row in chess_board)
     board_size = chess_board.shape[0] ** 2
     stage = self.determine_stage(occupied_tiles, board_size)
 
+    best_move = None
     if stage == "start":
-        move = self.monte_carlo_move(chess_board, player, opponent, simulations=50)
-    elif stage == "middle":
-        move = self.minimax_alpha_beta(chess_board, player, opponent, max_depth=5)
-    else: # stage == "end":
-        move = self.minimax_alpha_beta(chess_board, player, opponent, max_depth=10)  # Deeper for end-game
-
-    return move
+        move = self.monte_carlo_move(chess_board, player, opponent, simulations=100)
+    elif stage in ["middle","end"]:
+        # while not max time
+        move = self.minimax_alpha_beta(chess_board, player, opponent)
+        if move is not None:
+            best_move = move
+    return best_move
 
   def determine_stage(self, occupied_tiles, board_size):
       """
       Determines the stage of the game based on the number of occupied tiles.
       """
+      return 'end'
       # start of game if less than 25% of board is occupied
       if occupied_tiles < board_size * 0.20:
           return "start"
@@ -116,7 +118,7 @@ class ThirdAgent(Agent):
       return player_score - opponent_score
 
 
-  def minimax_alpha_beta(self, chess_board, player, opponent, max_depth):
+  def minimax_alpha_beta(self, chess_board, player, opponent):
       """
               Combines Minimax with Alpha-Beta pruning to find the best move.
               """
@@ -134,7 +136,7 @@ class ThirdAgent(Agent):
           execute_move(board_copy, move, player)
 
           # Perform Alpha-Beta pruning with Minimax
-          score = self.minimax(board_copy, max_depth - 1, False, player, opponent, alpha, beta)
+          score = self.minimax(board_copy, 2, False, player, opponent, alpha, beta)
           if score > best_score:
               best_score = score
               best_move = move
@@ -149,7 +151,7 @@ class ThirdAgent(Agent):
       """
       Minimax function with Alpha-Beta Pruning.
       """
-      if depth == 0 or check_endgame(board, player, opponent):
+      if depth <= 0 or check_endgame(board, player, opponent)[0]:
           return self.evaluate_board(board, player, opponent)
 
       valid_moves = get_valid_moves(board, player if maximizing else opponent)
@@ -260,9 +262,6 @@ class ThirdAgent(Agent):
         op_score = count_capture(temp_board, op_move, opponent)  # Estimate opponent's potential score
         opponent_best_score = max(opponent_best_score, op_score)
     score -= opponent_best_score*500  # Penalize if the opponent gains a strong position
-
-
-    # check 3 moves ahead
 
 
     return score
