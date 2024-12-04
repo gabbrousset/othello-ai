@@ -6,6 +6,10 @@ from copy import deepcopy
 import time
 from helpers import count_capture, execute_move, check_endgame, get_valid_moves
 
+# TOD remove import before submitting to contest
+import os
+import psutil
+
 
 @register_agent("ab_mo_t")
 class AB_MO_T(Agent):
@@ -21,7 +25,16 @@ class AB_MO_T(Agent):
         self.start_time = None
         self.time_limit = .3
 
+        self.EXACT = 0
+        self.LOWERBOUND = 1 # position is at least this good
+        self.UPPERBOUND = 2 # position is at most this bad
         self.transposition_table = {}
+
+        self.MAX_MEMORY_MB = 400
+        # self.process = psutil.Process(os.getpid())
+        self.table_size_limit = 1000000
+        self.move_number = 0
+        self.max_table_v_age = 2    # only keep positions from last 2 moves
 
         self.first_run = True
         self.M = None
@@ -69,9 +82,11 @@ class AB_MO_T(Agent):
         # so far when it nears 2 seconds.
         self.start_time = time.time()
 
+        self.move_number += 1
+        if self.move_number > self.max_table_v_age:
+            self.transposition_table.clear()
+
         if self.first_run:
-            self.first_run = False
-            
             dimensions = board.shape
             self.M = dimensions[0]
             last_idx = self.M - 1
@@ -86,6 +101,8 @@ class AB_MO_T(Agent):
 
             self.initialize_weights(dimensions)
 
+            self.first_run = False
+
         best_move = None
 
         depth = 1
@@ -98,6 +115,9 @@ class AB_MO_T(Agent):
 
         time_taken = time.time() - self.start_time
         print('ab_mo_t time taken:', time_taken, 'at depth:', depth)
+        process = psutil.Process()
+        mem_info = process.memory_info()
+        # print(f'memory usage: {mem_info.rss / (1024*1024):.2f} MB')
 
         return best_move
     
@@ -171,33 +191,64 @@ class AB_MO_T(Agent):
         if not self.has_time_left():
             raise TimeoutError
 
+        alpha_og = alpha
+
+        board_hash = self.get_board_hash(board, player)
+        tt_entry = self.transposition_table.get(board_hash)
+        if tt_entry and tt_entry['d'] >= depth:
+            if tt_entry['f'] == self.EXACT:
+                return tt_entry['v']
+            if tt_entry['f'] == self.LOWERBOUND:
+                alpha = max(alpha, tt_entry['v'])
+            elif tt_entry['f'] == self.UPPERBOUND:
+                beta = min(beta, tt_entry['v'])
+            if alpha >= beta:
+                return tt_entry['v']
+
         is_endgame, p1_score, p2_score = check_endgame(board, player, opponent)
 
+        flag = self.EXACT
+
         if is_endgame:
-            return self.evaluate_endgame(p1_score, p2_score, player)
+            value = self.evaluate_endgame(p1_score, p2_score, player)
+            self.store_position(board_hash, depth, value, flag)
+            return value
 
         if depth == 0:
-            return self.evaluate(board, player, opponent)
+            value = self.evaluate(board, player, opponent)
+            self.store_position(board_hash, depth, value, flag)
+            return value
 
         moves = self.get_ordered_moves(board, player)
 
         if not moves:
-            return -self.alpha_beta_negamax(board, depth - 1, -beta, -alpha, opponent, player)
+            value = -self.alpha_beta_negamax(board, depth - 1, -beta, -alpha, opponent, player)
+            self.store_position(board_hash, depth, value, flag)
+            return value
 
         new_board = np.empty_like(board)
+        best_value = float('-inf')
 
         for move in moves:
             np.copyto(new_board, board)
             execute_move(new_board, move, player)
 
             value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
-
+            best_value = max(best_value, value)
             alpha = max(alpha, value)
 
             if alpha >= beta:
-                break
+                # position is too good
+                flag = self.LOWERBOUND
+                self.store_position(board_hash, depth, best_value, flag)
+                return best_value
+            # elif
 
-        return alpha
+        if best_value <= alpha_og:
+            flag = self.UPPERBOUND
+
+        self.store_position(board_hash, depth, best_value, flag)
+        return best_value
 
     def evaluate(self, board, player, opponent):
         score = 0
@@ -227,8 +278,26 @@ class AB_MO_T(Agent):
 
         return score
 
-    def evaluate_endgame(self, p1_score, p2_score, player):
+    @staticmethod
+    def evaluate_endgame(p1_score, p2_score, player):
         # not returning infinite values because i get errors when comparing in negamax
         if player == 1:
             return (p1_score - p2_score) << 17  # shifting bc i think its faster than multiplying
         return (p2_score - p1_score) << 17
+
+    @staticmethod
+    def get_board_hash(board, player):
+        return hash((board.tobytes(), player))
+
+    def store_position(self, board_hash, depth, value, flag):
+        if len(self.transposition_table) >= self.table_size_limit:
+            # removing 10% of tables, from oldest to newest entries
+            remove_count = self.table_size_limit // 10
+            for _ in range(remove_count):
+                self.transposition_table.pop(next(iter(self.transposition_table)))
+
+        self.transposition_table[board_hash] = {
+            'd': depth,
+            'v': value,
+            'f': flag,
+        }

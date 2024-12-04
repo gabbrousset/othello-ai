@@ -26,8 +26,13 @@ ideas:
   - static weights
   - move ordering
   - transposition table
+    - zobrist hashing
   - game stage detection (early game, midgame, endgame)
     - changes weights and evaluations
+  - opening book
+  - handle "checkmates"
+  - why is it on depth 4000 at the end of the game
+  - handle timeouts better
 
 - heuristic:
   - stable nodes
