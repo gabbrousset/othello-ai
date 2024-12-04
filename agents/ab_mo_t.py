@@ -34,7 +34,7 @@ class AB_MO_T(Agent):
         # self.process = psutil.Process(os.getpid())
         self.table_size_limit = 1000000
         self.move_number = 0
-        self.max_table_v_age = 2    # only keep positions from last 2 moves
+        self.max_table_v_age = 4    # only keep positions from last 2 moves
 
         self.first_run = True
         self.M = None
@@ -55,6 +55,9 @@ class AB_MO_T(Agent):
         self.inner_center_w = 5
         self.center_w = 3
         self.center_corner_w = 15
+
+        self.num_of_nodes_checked = 0
+        self.table_hits = 0
 
     def has_time_left(self):
         return time.time() - self.start_time < self.time_limit
@@ -81,6 +84,8 @@ class AB_MO_T(Agent):
         # time_taken during your search and breaking with the best answer
         # so far when it nears 2 seconds.
         self.start_time = time.time()
+        self.num_of_nodes_checked = 0
+        self.table_hits = 0
 
         self.move_number += 1
         if self.move_number > self.max_table_v_age:
@@ -114,7 +119,7 @@ class AB_MO_T(Agent):
                 break
 
         time_taken = time.time() - self.start_time
-        print('ab_mo_t time taken:', time_taken, 'at depth:', depth)
+        print('ab_mo_t time taken:', time_taken, 'at depth:', depth, 'tt:', len(self.transposition_table), 'hits', self.table_hits, 'nodes:', self.num_of_nodes_checked)
         process = psutil.Process()
         mem_info = process.memory_info()
         # print(f'memory usage: {mem_info.rss / (1024*1024):.2f} MB')
@@ -195,13 +200,16 @@ class AB_MO_T(Agent):
 
         board_hash = self.get_board_hash(board, player)
         tt_entry = self.transposition_table.get(board_hash)
+
         if tt_entry and tt_entry['d'] >= depth:
+            self.table_hits += 1
             if tt_entry['f'] == self.EXACT:
                 return tt_entry['v']
             if tt_entry['f'] == self.LOWERBOUND:
                 alpha = max(alpha, tt_entry['v'])
             elif tt_entry['f'] == self.UPPERBOUND:
                 beta = min(beta, tt_entry['v'])
+
             if alpha >= beta:
                 return tt_entry['v']
 
@@ -240,7 +248,6 @@ class AB_MO_T(Agent):
                 flag = self.LOWERBOUND
                 self.store_position(board_hash, depth, alpha, flag)
                 return alpha
-            # elif
 
         if alpha <= alpha_og:
             flag = self.UPPERBOUND
@@ -249,6 +256,8 @@ class AB_MO_T(Agent):
         return alpha
 
     def evaluate(self, board, player, opponent):
+        self.num_of_nodes_checked += 1
+
         score = 0
 
         for square in self.x_squares:
