@@ -227,28 +227,26 @@ class AB_MO_T(Agent):
             return value
 
         new_board = np.empty_like(board)
-        best_value = float('-inf')
 
         for move in moves:
             np.copyto(new_board, board)
             execute_move(new_board, move, player)
 
             value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
-            best_value = max(best_value, value)
             alpha = max(alpha, value)
 
             if alpha >= beta:
                 # position is too good
                 flag = self.LOWERBOUND
-                self.store_position(board_hash, depth, best_value, flag)
-                return best_value
+                self.store_position(board_hash, depth, alpha, flag)
+                return alpha
             # elif
 
-        if best_value <= alpha_og:
+        if alpha <= alpha_og:
             flag = self.UPPERBOUND
 
-        self.store_position(board_hash, depth, best_value, flag)
-        return best_value
+        self.store_position(board_hash, depth, alpha, flag)
+        return alpha
 
     def evaluate(self, board, player, opponent):
         score = 0
