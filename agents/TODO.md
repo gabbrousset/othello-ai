@@ -16,7 +16,7 @@ ideas:
 - search algorithms:
   - ids
   - minimax
-  - minimax with alpha beta pruning
+  - mnimax with alpha beta pruning
   - negamax (with ab)
   - monte carlo sim
   - negascout (pvs)
@@ -26,11 +26,16 @@ ideas:
   - static weights
   - move ordering
   - transposition table
-  - game stage detection (early game, mid-game, endgame)
+    - zobrist hashing
+  - game stage detection (early game, midgame, endgame)
     - changes weights and evaluations
   - fixed sized data structure (lru) that cycles off the end
   - undo move function instead of copy
   - localized functions instead of helper imports
+  - opening book
+  - handle "checkmates"
+  - why is it on depth 4000 at the end of the game
+  - handle timeouts better
 
 - heuristic:
   - stable nodes
