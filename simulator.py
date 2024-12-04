@@ -174,7 +174,7 @@ class Simulator:
         )
 
         # Prepare arguments for parallel processing
-        game_args = [(i, self.args, [6]) for i in range(self.args.autoplay_runs)]
+        game_args = [(i, self.args, self.valid_board_sizes) for i in range(self.args.autoplay_runs)]
 
         # Run games in parallel
         with Pool(num_cores) as pool:
@@ -200,6 +200,8 @@ class Simulator:
             p2_times.extend(result["p1_time"])
             board_sizes_used.append(result["board_size"])
 
+        board_sizes_used = sorted(set(board_sizes_used))
+
         # Calculate statistics
         p1_win_rate = p1_win_count / self.args.autoplay_runs
         p2_win_rate = p2_win_count / self.args.autoplay_runs
@@ -210,7 +212,7 @@ class Simulator:
         logger.info("\nResults Summary:")
         logger.info("=" * 50)
         logger.info(f"Total Games Played: {self.args.autoplay_runs}")
-        logger.info(f"Board Sizes Used: {sorted(set(board_sizes_used))}")
+        logger.info(f"Board Sizes Used: {board_sizes_used}")
         logger.info(f"\nPlayer 1 ({self.args.player_1}):")
         logger.info(f"  Win Rate: {p1_win_rate:.2%}")
         logger.info(f"  Maximum Turn Time: {p1_max_time} seconds")
@@ -227,19 +229,19 @@ class Simulator:
 
         fname = (
             "tournament_results/"
+            + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+            + '--'
             + self.world.player_1_name
             + "_vs_"
             + self.world.player_2_name
-            + "_at_"
-            + datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
             + ".csv"
         )
         with open(fname, "w") as fo:
             fo.write(
-                "P1Name,P2Name,NumRuns,P1WinPercent,P2WinPercent,P1RunTime,P2RunTime\n"
+                "P1Name,P2Name,NumRuns,P1WinPercent,P2WinPercent,P1RunTime,P2RunTime,BoardSizes\n"
             )
             fo.write(
-                f"{self.world.player_1_name},{self.world.player_2_name},{self.args.autoplay_runs},{p1_win_count / self.args.autoplay_runs},{p2_win_count / self.args.autoplay_runs},{np.round(np.max(p1_times),5)},{np.round(np.max(p2_times),5)}\n"
+                f"{self.world.player_1_name},{self.world.player_2_name},{self.args.autoplay_runs},{p1_win_count / self.args.autoplay_runs},{p2_win_count / self.args.autoplay_runs},{np.round(np.max(p1_times),5)},{np.round(np.max(p2_times),5)}, {board_sizes_used}\n"
             )
 
 
