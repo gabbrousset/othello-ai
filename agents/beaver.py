@@ -38,23 +38,32 @@ class Beaver(Agent):
 
         self.first_run = True
         self.M = None
-        
+        # self.directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+
         self.corners = []
         self.x_squares = []
         self.c_squares = []
         self.edges_close = []
         self.center_corners = []
         
-        self.weights = None
-        self.normal_w = -5
-        self.corner_w = 100
-        self.x_square_w = -50
-        self.c_square_w = -30
-        self.edge_w = 5
-        self.edge_close_w = 20
-        self.inner_center_w = 5
-        self.center_w = 3
-        self.center_corner_w = 15
+        self.board_weights = None
+        
+        self.weights = {
+            'normal': -5,
+            'corner': 100,
+            'x_square': -50,
+            'c_square': -30,
+            'edge': 10,
+            'edge_close': 20,
+            'inner_center': 5,
+            'center': 3,
+            'center_corner': 15,
+
+            'stability': 100,
+            'frontier': -15,
+            'mobility': 20,
+            'disc_diff': 5,
+        }
 
         self.num_of_nodes_checked = 0
         self.table_hits = 0
@@ -128,34 +137,34 @@ class Beaver(Agent):
     
     def initialize_weights(self, dimensions):
         # set edges
-        self.weights = np.full(dimensions, self.edge_w)
+        self.board_weights = np.full(dimensions, self.weights['edge'])
         # set inner values of rows, columns
-        self.weights[1:-1, 1:-1] = self.normal_w
+        self.board_weights[1:-1, 1:-1] = self.weights['normal']
 
         # 6x6 = [2, 4] =   [2, M-2]
         # 8x8 = [2, 6] =   [2, M-2]
         # 10x10 = [4, 6] = [4, M-4]
         # 12x12 = [4, 8] = [4, M-4]
-        self.weights[2:self.M - 2, 2:self.M - 2] = self.center_w
+        self.board_weights[2:self.M - 2, 2:self.M - 2] = self.weights['center']
         if self.M > 7:
             for center_corner in self.center_corners:
-                self.weights[center_corner] = self.center_corner_w
+                self.board_weights[center_corner] = self.weights['center_corner']
 
             if self.M > 9:
-                self.weights[4:self.M-4, 4:self.M-4] = self.inner_center_w
+                self.board_weights[4:self.M-4, 4:self.M-4] = self.weights['inner_center']
 
         for corner in self.corners:
-            self.weights[corner] = self.corner_w
+            self.board_weights[corner] = self.weights['corner']
 
         for x_square in self.x_squares:
-            self.weights[x_square] = self.x_square_w
+            self.board_weights[x_square] = self.weights['x_square']
 
         for c_square in self.c_squares:
-            self.weights[c_square] = self.c_square_w
+            self.board_weights[c_square] = self.weights['c_square']
 
         if self.M > 6:
             for edge_close in self.edges_close:
-                self.weights[edge_close] = self.edge_close_w
+                self.board_weights[edge_close] = self.weights['edge_close']
 
     def get_ordered_moves(self, board, player):
         moves = get_valid_moves(board, player)
@@ -165,7 +174,7 @@ class Beaver(Agent):
         return [move for score, i, move in move_scores]
 
     def score_move(self, board, move, player):
-        score = self.weights[move]
+        score = self.board_weights[move]
         # score += count_capture(board, move, player) * 3
         return score
 
@@ -284,6 +293,27 @@ class Beaver(Agent):
         score -= len(get_valid_moves(board, opponent)) * 10
 
         return score
+
+    # def is_stable_disc(self, board, coords, player):
+    #     if coords in self.corners:
+    #         return True
+    #
+    #     r, c = coords
+    #     if r == 0 or r == self.M - 1 or c == 0 or c == self.M - 1:
+    #         if self.is_stable_edge_line(board, coords, player):
+    #             return True
+    #
+    #     return self.is_surrounded_stable(board, coords, player)
+    #
+    # def is_stable_edge_line(self, board, coords, player):
+    #     pass
+    #
+    # def is_surrounded_stable(self, board, coords, player):
+    #     r, c = coords
+    #
+    #     for dx, dy in self.directions:
+    #         new_r, new_c = r + dx, c + dy
+    #
 
     @staticmethod
     def evaluate_endgame(p1_score, p2_score, player):
