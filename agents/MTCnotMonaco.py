@@ -1,4 +1,6 @@
 # Student agent: Add your own agent here
+from types import NoneType
+
 from agents.agent import Agent
 from store import register_agent
 import sys
@@ -45,11 +47,11 @@ class MTC_NOT_MONACO(Agent):
         occupied_tiles = sum(cell != 0 for row in chess_board for cell in row)
         # occupied_tiles = sum(sum(row) != 0 for row in chess_board)
         board_size = chess_board.shape[0] ** 2
-        stage = self.determine_stage(occupied_tiles, board_size)
+        # stage = self.determine_stage(occupied_tiles, board_size)
 
         best_move = None
-        if stage == "start":
-            best_move = self.monte_carlo_move(chess_board, player, opponent, simulations=10)
+        # if stage == "start":
+        best_move = self.monte_carlo_move(chess_board, player, opponent, simulations=10)
         # elif stage in ["middle", "end"]:
         #     # while not max time
         #     move = self.minimax_alpha_beta(chess_board, player, opponent)
@@ -95,6 +97,7 @@ class MTC_NOT_MONACO(Agent):
 
         # Choose the move with the best average score
         best_move = max(move_scores, key=move_scores.get)
+        # print('move_scores', move_scores)
         return best_move
 
     def simulate_random_game(self, board, player, opponent):
@@ -102,8 +105,7 @@ class MTC_NOT_MONACO(Agent):
         Simulates a random game from the current board position.
         """
 
-        print("simulating random game")
-
+        # print("simulating random game")
 
         current_player = opponent  # Start with the opponent
         while not check_endgame(board, player, opponent)[0]:
@@ -111,8 +113,10 @@ class MTC_NOT_MONACO(Agent):
             # if valid_moves:
             # random_move = random.choice(valid_moves)
             # execute_move(board, random_move, current_player)
-            move = random_move(board, current_player)
-            execute_move(board, move, player)
+            valid_moves = get_valid_moves(board, current_player)
+            if len(valid_moves):
+                move = valid_moves[np.random.randint(len(valid_moves))]
+                execute_move(board, move, player)
 
             current_player = player if current_player == opponent else opponent
 
@@ -120,8 +124,6 @@ class MTC_NOT_MONACO(Agent):
         player_score = np.sum(board == player)
         opponent_score = np.sum(board == opponent)
         return player_score - opponent_score
-
-
 
 
     def evaluate_board(self, board, player, opponent):
