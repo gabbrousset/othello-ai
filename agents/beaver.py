@@ -198,7 +198,7 @@ class Beaver(Agent):
 
         return best_move
 
-    def alpha_beta_negamax(self, board, depth, alpha, beta, player, opponent):
+    def alpha_beta_negamax(self, board, depth, alpha, beta, player, opponent, num_moves=0):
         """
         Returns an eval_score
         """
@@ -232,7 +232,7 @@ class Beaver(Agent):
             return value
 
         if depth == 0:
-            value = self.evaluate(board, player, opponent)
+            value = self.evaluate(board, player, opponent, num_moves)
             self.store_position(board_hash, depth, value, flag)
             return value
 
@@ -249,7 +249,7 @@ class Beaver(Agent):
             np.copyto(new_board, board)
             execute_move(new_board, move, player)
 
-            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
+            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player, num_moves=len(moves))
             alpha = max(alpha, value)
 
             if alpha >= beta:
@@ -264,33 +264,16 @@ class Beaver(Agent):
         self.store_position(board_hash, depth, alpha, flag)
         return alpha
 
-    def evaluate(self, board, player, opponent):
+    def evaluate(self, board, player, opponent, num_moves):
         self.num_of_nodes_checked += 1
-
         score = 0
 
-        for square in self.x_squares:
-            disc = board[square]
-            if disc == player:
-                score -= 50
-            elif disc == opponent:
-                score += 50
+        player_pattern = np.where(board == player, 1, 0)
+        opp_pattern = np.where(board == opponent, 1, 0)
 
-        for square in self.c_squares:
-            disc = board[square]
-            if disc == player:
-                score -= 30
-            elif disc == opponent:
-                score += 30
+        score += (self.board_weights * player_pattern).sum() - (self.board_weights * opp_pattern).sum()
 
-        for square in self.corners:
-            disc = board[square]
-            if disc == player:
-                score += 100
-            elif disc == opponent:
-                score -= 100
-
-        score -= len(get_valid_moves(board, opponent)) * 10
+        score += (num_moves - len(get_valid_moves(board, opponent))) * 10
 
         return score
 
