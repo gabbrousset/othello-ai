@@ -14,10 +14,10 @@ ideas:
 - prioritize flipping discs in the inner side
 
 - search algorithms:
-  - ids
-  - minimax
-  - mnimax with alpha beta pruning
-  - negamax (with ab)
+  - ids [x]
+  - minimax [x]
+  - mnimax with alpha beta pruning [x]
+  - negamax (with ab) [x]
   - monte carlo sim
   - negascout (pvs)
   - mtd(f)
@@ -25,7 +25,7 @@ ideas:
 - features:
   - static weights
   - move ordering
-  - transposition table
+  - transposition table [x]
     - zobrist hashing
   - game stage detection (early game, midgame, endgame)
     - changes weights and evaluations
