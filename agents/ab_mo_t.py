@@ -119,7 +119,7 @@ class AB_MO_T(Agent):
                 break
 
         time_taken = time.time() - self.start_time
-        print('ab_mo_t time taken:', time_taken, 'at depth:', depth, 'tt:', len(self.transposition_table), 'hits', self.table_hits, 'nodes:', self.num_of_nodes_checked)
+        # print('ab_mo_t time taken:', time_taken, 'at depth:', depth, 'tt:', len(self.transposition_table), 'hits', self.table_hits, 'nodes:', self.num_of_nodes_checked)
         process = psutil.Process()
         mem_info = process.memory_info()
         # print(f'memory usage: {mem_info.rss / (1024*1024):.2f} MB')
