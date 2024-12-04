@@ -9,3 +9,4 @@ from .minimaxAB_agent import ThirdAgent
 from .ab_mo_agent import AB_MO_Agent
 from .ab_mo_t import AB_MO_T
 from .mtc_ab_minmax import MTC_AB_MINMAX
+from .MTCnotMonaco import MTC_NOT_MONACO

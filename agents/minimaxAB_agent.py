@@ -50,7 +50,7 @@ class ThirdAgent(Agent):
 
     best_move = None
     if stage == "start":
-        move = self.monte_carlo_move(chess_board, player, opponent, simulations=100)
+        best_move = self.monte_carlo_move(chess_board, player, opponent, simulations=10)
     elif stage in ["middle","end"]:
         # while not max time
         move = self.minimax_alpha_beta(chess_board, player, opponent)
@@ -62,7 +62,7 @@ class ThirdAgent(Agent):
       """
       Determines the stage of the game based on the number of occupied tiles.
       """
-      return 'end'
+      return "end"
       # start of game if less than 25% of board is occupied
       if occupied_tiles < board_size * 0.20:
           return "start"
@@ -103,7 +103,7 @@ class ThirdAgent(Agent):
       Simulates a random game from the current board position.
       """
       current_player = opponent  # Start with the opponent
-      while not check_endgame(board, player, opponent):
+      while not check_endgame(board, player, opponent)[0]:
           #valid_moves = get_valid_moves(board, current_player)
           #if valid_moves:
               #random_move = random.choice(valid_moves)
@@ -151,6 +151,9 @@ class ThirdAgent(Agent):
       """
       Minimax function with Alpha-Beta Pruning.
       """
+      # print("HERE IN MINIMAX()")
+
+
       if depth <= 0 or check_endgame(board, player, opponent)[0]:
           return self.evaluate_board(board, player, opponent)
 
