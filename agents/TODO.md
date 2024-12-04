@@ -29,6 +29,9 @@ ideas:
     - zobrist hashing
   - game stage detection (early game, midgame, endgame)
     - changes weights and evaluations
+  - fixed sized data structure (lru) that cycles off the end
+  - undo move function instead of copy
+  - localized functions instead of helper imports
   - opening book
   - handle "checkmates"
   - why is it on depth 4000 at the end of the game
