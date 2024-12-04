@@ -8,15 +8,15 @@ import time
 from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
 
 @register_agent("agent1")
-class SecondAgent(Agent):
+class Agent1(Agent):
   """
   A class for your implementation. Feel free to use this class to
   add any helper functionalities needed for your agent.
   """
 
   def __init__(self):
-    super(SecondAgent, self).__init__()
-    self.name = "SecondAgent"
+    super(Agent1, self).__init__()
+    self.name = "Agent1"
 
   def step(self, chess_board, player, opponent):
     """
@@ -65,8 +65,8 @@ class SecondAgent(Agent):
         best_move = move
         best_score = score
 
-    time_taken = time.time() - start_time
-    print("My AI's turn took ", time_taken, "seconds.")
+    # time_taken = time.time() - start_time
+    # print("My AI's turn took ", time_taken, "seconds.")
 
     # Dummy return (you should replace this with your actual logic)
     # Returning a random valid move as an example

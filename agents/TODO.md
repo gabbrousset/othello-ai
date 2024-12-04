@@ -1,6 +1,3 @@
-strategy: basic
-strength: low
-
 ideas:
 - corners are good
 - avoid x-squares and c-squares at all costs
@@ -9,7 +6,6 @@ ideas:
 - fewer surface discs are better
 - group discs together in a compact manner
 
-rules:
 - never play into x-squares or c-squares, unless given no other choice
 - given only the choice of an x-square or a c-square pick the c-square
 - minimize surface discs at the start until you have a corner
@@ -17,3 +13,27 @@ rules:
 - minimize manhattan distance between your discs
 - prioritize flipping discs in the inner side
 
+- search algorithms:
+  - ids
+  - minimax
+  - minimax with alpha beta pruning
+  - negamax (with ab)
+  - monte carlo sim
+  - negascout (pvs)
+  - mtd(f)
+
+- features:
+  - static weights
+  - move ordering
+  - transposition table
+  - game stage detection (early game, mid-game, endgame)
+    - changes weights and evaluations
+  - fixed sized data structure (lru) that cycles off the end
+  - undo move function instead of copy
+  - localized functions instead of helper imports
+
+- heuristic:
+  - stable nodes
+  - better weights
+  - edges
+  - frontier
