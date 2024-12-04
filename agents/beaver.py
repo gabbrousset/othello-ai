@@ -59,11 +59,14 @@ class Beaver(Agent):
             'center': 3,
             'center_corner': 15,
 
-            'stability': 100,
-            'frontier': -15,
-            'mobility': 20,
-            'disc_diff': 5,
+            # 'stability': 100,
+            # 'frontier': -15,
+            # 'mobility': 20,
+            # 'disc_diff': 5,
         }
+
+        # self.stage_multipliers = {
+        # }
 
         self.num_of_nodes_checked = 0
         self.table_hits = 0
@@ -276,27 +279,6 @@ class Beaver(Agent):
         score += (num_moves - len(get_valid_moves(board, opponent))) * 10
 
         return score
-
-    # def is_stable_disc(self, board, coords, player):
-    #     if coords in self.corners:
-    #         return True
-    #
-    #     r, c = coords
-    #     if r == 0 or r == self.M - 1 or c == 0 or c == self.M - 1:
-    #         if self.is_stable_edge_line(board, coords, player):
-    #             return True
-    #
-    #     return self.is_surrounded_stable(board, coords, player)
-    #
-    # def is_stable_edge_line(self, board, coords, player):
-    #     pass
-    #
-    # def is_surrounded_stable(self, board, coords, player):
-    #     r, c = coords
-    #
-    #     for dx, dy in self.directions:
-    #         new_r, new_c = r + dx, c + dy
-    #
 
     @staticmethod
     def evaluate_endgame(p1_score, p2_score, player):
