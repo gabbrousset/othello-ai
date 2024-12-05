@@ -1,13 +1,11 @@
 from agents.agent import Agent
 from store import register_agent
-import sys
 import numpy as np
-from copy import deepcopy
 import time
-from helpers import random_move, count_capture, execute_move, check_endgame, get_valid_moves
+from helpers import execute_move, check_endgame, get_valid_moves
 
 
-@register_agent("student_agent")
+@register_agent("beaver")
 class StudentAgent(Agent):
     """
     A class for your implementation. Feel free to use this class to
@@ -16,7 +14,55 @@ class StudentAgent(Agent):
 
     def __init__(self):
         super(StudentAgent, self).__init__()
-        self.name = "StudentAgent"
+        # Better EvAl VERsion
+        self.name = "beaver"
+
+        self.start_time = None
+        self.time_limit = 1.75
+
+        self.EXACT = 0
+        self.LOWERBOUND = 1  # position is at least this good
+        self.UPPERBOUND = 2  # position is at most this bad
+        self.transposition_table = {}
+
+        self.table_size_limit = 1000000
+        self.move_number = 0
+        self.max_table_v_age = 4  # only keep positions from last 2 moves
+
+        self.first_run = True
+        self.M = None
+        self.directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+
+        self.corners = []
+        self.x_squares = []
+        self.c_squares = []
+        self.edges_close = []
+        self.center_corners = []
+
+        self.board_weights = None
+
+        self.weights = {
+            'normal': -5,
+            'corner': 100,
+            'x_square': -50,
+            'c_square': -30,
+            'edge': 10,
+            'edge_close': 20,
+            'inner_center': 5,
+            'center': 3,
+            'center_corner': 15,
+
+            # 'stability': 100,
+            # 'frontier': -15,
+            # 'mobility': 20,
+            # 'disc_diff': 5,
+        }
+
+        # self.stage_multipliers = {
+        # }
+
+    def has_time_left(self):
+        return time.time() - self.start_time < self.time_limit
 
     def step(self, board, player, opponent):
         """
@@ -39,12 +85,222 @@ class StudentAgent(Agent):
         # Some simple code to help you with timing. Consider checking
         # time_taken during your search and breaking with the best answer
         # so far when it nears 2 seconds.
-        start_time = time.time()
-        time_taken = time.time() - start_time
+        self.start_time = time.time()
 
-        print("My AI's turn took ", time_taken, "seconds.")
+        self.move_number += 1
+        if self.move_number > self.max_table_v_age:
+            self.transposition_table.clear()
 
-        # Dummy return (you should replace this with your actual logic)
-        # Returning a random valid move as an example
-        return random_move(board,player)
+        if self.first_run:
+            dimensions = board.shape
+            self.M = dimensions[0]
+            last_idx = self.M - 1
 
+            self.corners = {(0, 0), (0, last_idx), (last_idx, 0), (last_idx, last_idx)}
+            self.x_squares = {(1, 1), (1, self.M - 2), (self.M - 2, 1), (self.M - 2, self.M - 2)}
+            self.c_squares = {(0, 1), (0, self.M - 2), (1, 0), (1, last_idx), (self.M - 2, 0),
+                              (self.M - 2, last_idx), (last_idx, 1), (last_idx, self.M - 2)}
+            self.edges_close = {(0, 2), (0, self.M - 3), (2, 0), (2, last_idx), (self.M - 3, 0),
+                                (self.M - 3, last_idx), (last_idx, 2), (last_idx, self.M - 3)}
+            self.center_corners = {(2, 2), (2, self.M - 3), (self.M - 3, 2), (self.M - 3, self.M - 3)}
+
+            self.initialize_weights(dimensions)
+
+            self.first_run = False
+
+        best_move = None
+
+        depth = 1
+        while self.has_time_left():
+            try:
+                best_move = self.ids(board, player, opponent, depth)
+                depth += 1
+            except TimeoutError:
+                break
+
+        return best_move
+
+    def initialize_weights(self, dimensions):
+        # set edges
+        self.board_weights = np.full(dimensions, self.weights['edge'])
+        # set inner values of rows, columns
+        self.board_weights[1:-1, 1:-1] = self.weights['normal']
+
+        # 6x6 = [2, 4] =   [2, M-2]
+        # 8x8 = [2, 6] =   [2, M-2]
+        # 10x10 = [4, 6] = [4, M-4]
+        # 12x12 = [4, 8] = [4, M-4]
+        self.board_weights[2:self.M - 2, 2:self.M - 2] = self.weights['center']
+        if self.M > 7:
+            for center_corner in self.center_corners:
+                self.board_weights[center_corner] = self.weights['center_corner']
+
+            if self.M > 9:
+                self.board_weights[4:self.M - 4, 4:self.M - 4] = self.weights['inner_center']
+
+        for corner in self.corners:
+            self.board_weights[corner] = self.weights['corner']
+
+        for x_square in self.x_squares:
+            self.board_weights[x_square] = self.weights['x_square']
+
+        for c_square in self.c_squares:
+            self.board_weights[c_square] = self.weights['c_square']
+
+        if self.M > 6:
+            for edge_close in self.edges_close:
+                self.board_weights[edge_close] = self.weights['edge_close']
+
+    def get_ordered_moves(self, board, player):
+        moves = get_valid_moves(board, player)
+        # using enum to avoid comparing moves (i think its faster)
+        move_scores = [(self.score_move(move), i, move) for i, move in enumerate(moves)]
+        move_scores.sort(reverse=True)
+        return [move for score, i, move in move_scores]
+
+    def score_move(self, move):
+        score = self.board_weights[move]
+        return score
+
+    def ids(self, board, player, opponent, depth):
+        moves = self.get_ordered_moves(board, player)
+        best_move = None
+        best_value = float('-inf')
+        alpha = float('-inf')
+        beta = float('inf')
+        new_board = np.empty_like(board)
+
+        for move in moves:
+            np.copyto(new_board, board)
+            execute_move(new_board, move, player)
+
+            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player)
+
+            if value > best_value:
+                best_value = value
+                best_move = move
+
+        return best_move
+
+    def alpha_beta_negamax(self, board, depth, alpha, beta, player, opponent, num_moves=0):
+        """
+        Returns an eval_score
+        """
+        if not self.has_time_left():
+            raise TimeoutError
+
+        alpha_og = alpha
+
+        board_hash = self.get_board_hash(board, player)
+        tt_entry = self.transposition_table.get(board_hash)
+
+        if tt_entry and tt_entry['d'] >= depth:
+            if tt_entry['f'] == self.EXACT:
+                return tt_entry['v']
+            if tt_entry['f'] == self.LOWERBOUND:
+                alpha = max(alpha, tt_entry['v'])
+            elif tt_entry['f'] == self.UPPERBOUND:
+                beta = min(beta, tt_entry['v'])
+
+            if alpha >= beta:
+                return tt_entry['v']
+
+        is_endgame, p1_score, p2_score = check_endgame(board, player, opponent)
+
+        flag = self.EXACT
+
+        if is_endgame:
+            value = self.evaluate_endgame(p1_score, p2_score, player)
+            self.store_position(board_hash, depth, value, flag)
+            return value
+
+        if depth == 0:
+            value = self.evaluate(board, player, opponent, num_moves)
+            self.store_position(board_hash, depth, value, flag)
+            return value
+
+        moves = self.get_ordered_moves(board, player)
+
+        if not moves:
+            value = -self.alpha_beta_negamax(board, depth - 1, -beta, -alpha, opponent, player)
+            self.store_position(board_hash, depth, value, flag)
+            return value
+
+        new_board = np.empty_like(board)
+
+        for move in moves:
+            np.copyto(new_board, board)
+            execute_move(new_board, move, player)
+
+            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player,
+                                             num_moves=len(moves))
+            alpha = max(alpha, value)
+
+            if alpha >= beta:
+                # position is too good
+                flag = self.LOWERBOUND
+                self.store_position(board_hash, depth, alpha, flag)
+                return alpha
+
+        if alpha <= alpha_og:
+            flag = self.UPPERBOUND
+
+        self.store_position(board_hash, depth, alpha, flag)
+        return alpha
+
+    def evaluate(self, board, player, opponent, num_moves):
+        score = 0
+
+        player_pattern = np.where(board == player, 1, 0)
+        opp_pattern = np.where(board == opponent, 1, 0)
+
+        score += (self.board_weights * player_pattern).sum() - (self.board_weights * opp_pattern).sum()
+
+        score += (num_moves - len(get_valid_moves(board, opponent))) * 10
+
+        score -= (self.count_frontier_discs(board, player) - self.count_frontier_discs(board, opponent)) * 15
+
+        return score
+
+    def count_frontier_discs(self, board, player):
+        count = 0
+
+        for i in range(self.M):
+            for j in range(self.M):
+                if board[i, j] == player:
+                    if self.has_x_neighbor(board, (i, j)):
+                        count += 1
+
+        return count
+
+    def has_x_neighbor(self, board, pos, x=0):
+        for dx, dy in self.directions:
+            i, j = pos[0] + dx, pos[1] + dy
+            if 0 <= i < self.M and 0 <= j < self.M:
+                if board[i, j] == x:
+                    return True
+        return False
+
+    @staticmethod
+    def evaluate_endgame(p1_score, p2_score, player):
+        # not returning infinite values because i get errors when comparing in negamax
+        if player == 1:
+            return (p1_score - p2_score) << 17  # shifting bc i think its faster than multiplying
+        return (p2_score - p1_score) << 17
+
+    @staticmethod
+    def get_board_hash(board, player):
+        return hash((board.tobytes(), player))
+
+    def store_position(self, board_hash, depth, value, flag):
+        if len(self.transposition_table) >= self.table_size_limit:
+            # removing 10% of tables, from oldest to newest entries
+            remove_count = self.table_size_limit // 10
+            for _ in range(remove_count):
+                self.transposition_table.pop(next(iter(self.transposition_table)))
+
+        self.transposition_table[board_hash] = {
+            'd': depth,
+            'v': value,
+            'f': flag,
+        }
