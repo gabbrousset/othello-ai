@@ -6,7 +6,7 @@ from copy import deepcopy
 import time
 from helpers import count_capture, execute_move, check_endgame, get_valid_moves
 
-# TOD remove import before submitting to contest
+# TODO remove import before submitting to contest
 import os
 import psutil
 
