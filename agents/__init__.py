@@ -14,3 +14,4 @@ from .beaver import Beaver
 
 from agents.extra.adv import ADV_Agent
 from agents.extra.adv3 import ADV_Agent3
+from agents.extra.adv4 import Adv4
