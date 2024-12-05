@@ -9,3 +9,4 @@ __pycache__
 .idea/misc.xml
 .idea/othello-ai.iml
 
+agents/extra
