@@ -43,6 +43,8 @@ class MTC_AB_MINMAX(Agent):
     # time_taken during your search and breaking with the best answer
     # so far when it nears 2 seconds.
 
+    self.start_time = time.time()
+
     # game stage
     occupied_tiles = 0
     for row in chess_board:
@@ -52,12 +54,12 @@ class MTC_AB_MINMAX(Agent):
     board_size = chess_board.shape[0] ** 2
     stage = self.determine_stage(occupied_tiles, board_size)
 
-    if stage == "start":
-        move = self.monte_carlo_move(chess_board, player, opponent)
-    elif stage == "middle":
-        move = self.minimax_alpha_beta(chess_board, player, opponent)
-    else: # stage == "end":
-        move = self.minimax_alpha_beta(chess_board, player, opponent)  # Deeper for end-game
+    # if stage == "start":
+    move = self.monte_carlo_move(chess_board, player, opponent)
+    # elif stage == "middle":
+    # move = self.minimax_alpha_beta(chess_board, player, opponent)
+    # else: # stage == "end":
+    # move = self.minimax_alpha_beta(chess_board, player, opponent)  # Deeper for end-game
 
     # print(f"Move is {move} in {time.time() - start_time} seconds.")
     return move
