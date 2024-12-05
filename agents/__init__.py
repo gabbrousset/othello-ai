@@ -11,6 +11,7 @@ from .ab_mo_t import AB_MO_T
 from .mtc_ab_minmax import MTC_AB_MINMAX
 from .MTCnotMonaco import MTC_NOT_MONACO
 from .beaver import Beaver
+from .beaver2 import Beaver2
 
 from agents.extra.adv import ADV_Agent
 from agents.extra.adv3 import ADV_Agent3
