@@ -10,3 +10,5 @@ __pycache__
 .idea/othello-ai.iml
 
 agents/extra
+
+tournament_results/*
