@@ -15,3 +15,9 @@ from .beaver import Beaver
 from agents.extra.adv import ADV_Agent
 from agents.extra.adv3 import ADV_Agent3
 from agents.extra.adv4 import Adv4
+from agents.extra.adv5 import ADV5
+from agents.extra.adv6 import ADV6
+from agents.extra.adv7 import ADV7
+from agents.extra.adv8 import ADV8
+from agents.extra.adv9 import ADV9
+from agents.Beaver_test import BeaverTest

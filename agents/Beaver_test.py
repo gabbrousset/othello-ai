@@ -11,30 +11,30 @@ import os
 import psutil
 
 
-@register_agent("beaver")
-class Beaver(Agent):
+@register_agent("Beaver_test")
+class BeaverTest(Agent):
     """
     A class for your implementation. Feel free to use this class to
     add any helper functionalities needed for your agent.
     """
 
     def __init__(self):
-        super(Beaver, self).__init__()
-        self.name = "Beaver"
+        super(BeaverTest, self).__init__()
+        self.name = "Beaver_test"
 
         self.start_time = None
         self.time_limit = .5
 
         self.EXACT = 0
-        self.LOWERBOUND = 1 # position is at least this good
-        self.UPPERBOUND = 2 # position is at most this bad
+        self.LOWERBOUND = 1  # position is at least this good
+        self.UPPERBOUND = 2  # position is at most this bad
         self.transposition_table = {}
 
         self.MAX_MEMORY_MB = 400
         # self.process = psutil.Process(os.getpid())
         self.table_size_limit = 1000000
         self.move_number = 0
-        self.max_table_v_age = 4    # only keep positions from last 2 moves
+        self.max_table_v_age = 4  # only keep positions from last 2 moves
 
         self.first_run = True
         self.M = None
@@ -45,19 +45,19 @@ class Beaver(Agent):
         self.c_squares = []
         self.edges_close = []
         self.center_corners = []
-        
+
         self.board_weights = None
-        
+
         self.weights = {
-            'normal': -5,
-            'corner': 100,
-            'x_square': -50,
-            'c_square': -30,
-            'edge': 10,
-            'edge_close': 20,
-            'inner_center': 5,
-            'center': 3,
-            'center_corner': 15,
+            'normal': -5,           # others
+            'corner': 1000,
+            'x_square': -500,        # diag to corner
+            'c_square': -300,        # besides corner
+            'edge': 200,
+            'edge_close': 500,       # besides c_square
+            'inner_center': 50,      # first 4 tiles with first 4 pieces
+            'center': 5,            # others
+            'center_corner': 15,    # walls around first 4 pieces
 
             # 'stability': 100,
             # 'frontier': -15,
@@ -107,14 +107,14 @@ class Beaver(Agent):
             dimensions = board.shape
             self.M = dimensions[0]
             last_idx = self.M - 1
-            
+
             self.corners = {(0, 0), (0, last_idx), (last_idx, 0), (last_idx, last_idx)}
             self.x_squares = {(1, 1), (1, self.M - 2), (self.M - 2, 1), (self.M - 2, self.M - 2)}
             self.c_squares = {(0, 1), (0, self.M - 2), (1, 0), (1, last_idx), (self.M - 2, 0),
                               (self.M - 2, last_idx), (last_idx, 1), (last_idx, self.M - 2)}
             self.edges_close = {(0, 2), (0, self.M - 3), (2, 0), (2, last_idx), (self.M - 3, 0),
-                              (self.M - 3, last_idx), (last_idx, 2), (last_idx, self.M - 3)}
-            self.center_corners = {(2, 2), (2, self.M -3), (self.M - 3, 2), (self.M - 3, self.M - 3)}
+                                (self.M - 3, last_idx), (last_idx, 2), (last_idx, self.M - 3)}
+            self.center_corners = {(2, 2), (2, self.M - 3), (self.M - 3, 2), (self.M - 3, self.M - 3)}
 
             self.initialize_weights(dimensions)
 
@@ -137,7 +137,7 @@ class Beaver(Agent):
         # print(f'memory usage: {mem_info.rss / (1024*1024):.2f} MB')
 
         return best_move
-    
+
     def initialize_weights(self, dimensions):
         # set edges
         self.board_weights = np.full(dimensions, self.weights['edge'])
@@ -154,7 +154,7 @@ class Beaver(Agent):
                 self.board_weights[center_corner] = self.weights['center_corner']
 
             if self.M > 9:
-                self.board_weights[4:self.M-4, 4:self.M-4] = self.weights['inner_center']
+                self.board_weights[4:self.M - 4, 4:self.M - 4] = self.weights['inner_center']
 
         for corner in self.corners:
             self.board_weights[corner] = self.weights['corner']
@@ -252,7 +252,8 @@ class Beaver(Agent):
             np.copyto(new_board, board)
             execute_move(new_board, move, player)
 
-            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player, num_moves=len(moves))
+            value = -self.alpha_beta_negamax(new_board, depth - 1, -beta, -alpha, opponent, player,
+                                             num_moves=len(moves))
             alpha = max(alpha, value)
 
             if alpha >= beta:
