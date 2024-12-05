@@ -18,6 +18,11 @@ class MTC_AB_MINMAX(Agent):
     super(MTC_AB_MINMAX, self).__init__()
     self.name = "MTC_AB_MINMAX"
 
+  start_time = time.time()
+  time_limit = 0.5
+  def has_time_left(self):
+      return time.time() - self.start_time < self.time_limit
+
   def step(self, chess_board, player, opponent):
     """
     Implement the step function of your agent here.
@@ -37,7 +42,6 @@ class MTC_AB_MINMAX(Agent):
     # Some simple code to help you with timing. Consider checking
     # time_taken during your search and breaking with the best answer
     # so far when it nears 2 seconds.
-    start_time = time.time()
 
     # game stage
     occupied_tiles = 0
@@ -49,65 +53,116 @@ class MTC_AB_MINMAX(Agent):
     stage = self.determine_stage(occupied_tiles, board_size)
 
     if stage == "start":
-        move = self.monte_carlo_move(chess_board, player, opponent, simulations=50)
+        move = self.monte_carlo_move(chess_board, player, opponent)
     elif stage == "middle":
-        move = self.minimax_alpha_beta(chess_board, player, opponent, max_depth=5)
+        move = self.minimax_alpha_beta(chess_board, player, opponent)
     else: # stage == "end":
-        move = self.minimax_alpha_beta(chess_board, player, opponent, max_depth=10)  # Deeper for end-game
+        move = self.minimax_alpha_beta(chess_board, player, opponent)  # Deeper for end-game
 
+    # print(f"Move is {move} in {time.time() - start_time} seconds.")
     return move
+
+
+  class MoveNode:
+      def __init__(self, move, state=None, parent=None):
+          self.move = move
+          self.state = state
+          self.parent = parent
+          self.visits = 0
+          self.total_score = 0.0
+          self.children = []
+
+      def uct(self, total_parent_visits, exploration=1.414):
+          if self.visits == 0:
+              return float('inf')  # Always explore unvisited nodes
+          return (self.total_score / self.visits) + exploration * (total_parent_visits ** 0.5 / (1 + self.visits))
+
+      def is_fully_expanded(self):
+          return len(self.children) > 0
+
+
 
   def determine_stage(self, occupied_tiles, board_size):
       """
       Determines the stage of the game based on the number of occupied tiles.
       """
       # start of game if less than 25% of board is occupied
-      if occupied_tiles < board_size * 0.20:
+      if occupied_tiles < board_size * 0.10:
           return "start"
       # middle of game if more than 25% and less than 75% of board is occupied
-      elif occupied_tiles < board_size * 0.60:
+      elif occupied_tiles < board_size * 0.80:
           return "middle"
       # end of game if more than 75% of board is occupied
       else:
           return "end"
 
-
-  def monte_carlo_move(self, chess_board, player, opponent, simulations):
+  def monte_carlo_move(self, chess_board, player, opponent):
       """
               Uses Monte Carlo simulations to determine the best move.
               """
-      valid_moves = get_valid_moves(chess_board, player)
-      if not valid_moves:
-          return None
 
-      # create dictionary where key = valid move, and value = score associated to the move
-      move_scores = {move: 0 for move in valid_moves}
+      root = self.MoveNode(None, state=deepcopy(chess_board))
 
-      for move in valid_moves:
-          for _ in range(simulations):
-              board_copy = deepcopy(chess_board)
+      while self.has_time_left():
+          selected_node = self.select(root)
+
+          if not selected_node.is_fully_expanded():
+              self.expand(selected_node, player if selected_node.parent is None else opponent)
+
+          # If no children were added (e.g., no valid moves), continue to next iteration
+          if not selected_node.children:
+              continue
+
+          simulation_node = selected_node.children[np.random.randint(len(selected_node.children))]
+          result = self.simulate_random_game(simulation_node.state, player, opponent)
+
+          self.backpropagate(simulation_node, result)
+
+      # Select the best move from the root's children
+      if root.children:
+          best_child = max(root.children, key=lambda child: child.visits)
+          return best_child.move
+      else:
+          return None  # If no valid moves exist
+
+  def select(self, node):
+      """
+      Traverse the tree to select a node using UCT.
+      """
+      while node.is_fully_expanded() and node.children:
+          total_visits = sum(child.visits for child in node.children)
+          node = max(node.children, key=lambda child: child.uct(total_visits))
+      return node
+
+  def expand(self, node, player):
+      """
+      Add all valid moves as children of the given node.
+      If no valid moves, add a 'pass' child with the same state.
+      """
+      valid_moves = get_valid_moves(node.state, player)
+      if valid_moves:
+          for move in valid_moves:
+              board_copy = deepcopy(node.state)
               execute_move(board_copy, move, player)
-
-              # Simulate random play
-              score = self.simulate_random_game(board_copy, player, opponent)
-              move_scores[move] += score
-
-      # Choose the move with the best average score
-      best_move = max(move_scores, key=move_scores.get)
-      return best_move
+              node.children.append(self.MoveNode(move, state=board_copy, parent=node))
+      else:
+          # Add a 'pass' child to simulate passing the turn
+          node.children.append(self.MoveNode(None, state=deepcopy(node.state), parent=node))
 
   def simulate_random_game(self, board, player, opponent):
       """
       Simulates a random game from the current board position.
       """
-      current_player = opponent  # Start with the opponent
-      while not check_endgame(board, player, opponent):
-          #valid_moves = get_valid_moves(board, current_player)
-          #if valid_moves:
-              #random_move = random.choice(valid_moves)
-              #execute_move(board, random_move, current_player)
-          move = random_move(board, current_player)
 
+      # print("simulating random game")
+
+      current_player = opponent  # Start with the opponent
+      while not check_endgame(board, player, opponent)[0]:
+          valid_moves = get_valid_moves(board, current_player)
+          if valid_moves:
+              # Heuristic: Prefer moves that maximize flips
+              best_move = max(valid_moves, key=lambda move: count_capture(board, move, current_player))
+              execute_move(board, best_move, current_player)
           current_player = player if current_player == opponent else opponent
 
       # Evaluate the final board state
@@ -115,8 +170,18 @@ class MTC_AB_MINMAX(Agent):
       opponent_score = np.sum(board == opponent)
       return player_score - opponent_score
 
+  def backpropagate(self, node, score):
+      """
+      Propagate the simulation result back up the tree.
+      """
+      while node is not None:
+          node.visits += 1
+          node.total_score += score
+          node = node.parent
 
-  def minimax_alpha_beta(self, chess_board, player, opponent, max_depth):
+
+
+  def minimax_alpha_beta(self, chess_board, player, opponent):
       """
               Combines Minimax with Alpha-Beta pruning to find the best move.
               """
@@ -134,7 +199,7 @@ class MTC_AB_MINMAX(Agent):
           execute_move(board_copy, move, player)
 
           # Perform Alpha-Beta pruning with Minimax
-          score = self.minimax(board_copy, max_depth - 1, False, player, opponent, alpha, beta)
+          score = self.minimax(board_copy, 0, False, player, opponent, alpha, beta)
           if score > best_score:
               best_score = score
               best_move = move
@@ -149,20 +214,20 @@ class MTC_AB_MINMAX(Agent):
       """
       Minimax function with Alpha-Beta Pruning.
       """
-      if depth == 0 or check_endgame(board, player, opponent):
+      if check_endgame(board, player, opponent)[0] or not self.has_time_left():
           return self.evaluate_board(board, player, opponent)
 
       valid_moves = get_valid_moves(board, player if maximizing else opponent)
       if not valid_moves:
           # Pass turn if no moves are available
-          return self.minimax(board, depth - 1, not maximizing, player, opponent, alpha, beta)
+          return self.minimax(board, depth + 1, not maximizing, player, opponent, alpha, beta)
 
       if maximizing:
           max_eval = -float('inf')
           for move in valid_moves:
               board_copy = deepcopy(board)
               execute_move(board_copy, move, player)
-              eval = self.minimax(board_copy, depth - 1, False, player, opponent, alpha, beta)
+              eval = self.minimax(board_copy, depth + 1, False, player, opponent, alpha, beta)
               max_eval = max(max_eval, eval)
               alpha = max(alpha, eval)
               if beta <= alpha:
@@ -173,12 +238,15 @@ class MTC_AB_MINMAX(Agent):
           for move in valid_moves:
               board_copy = deepcopy(board)
               execute_move(board_copy, move, opponent)
-              eval = self.minimax(board_copy, depth - 1, True, player, opponent, alpha, beta)
+              eval = self.minimax(board_copy, depth + 1, True, player, opponent, alpha, beta)
               min_eval = min(min_eval, eval)
               beta = min(beta, eval)
               if beta <= alpha:
                   break  # Prune
           return min_eval
+
+
+
 
   def evaluate_board(self, board, player, opponent):
     """
@@ -260,9 +328,5 @@ class MTC_AB_MINMAX(Agent):
         op_score = count_capture(temp_board, op_move, opponent)  # Estimate opponent's potential score
         opponent_best_score = max(opponent_best_score, op_score)
     score -= opponent_best_score*500  # Penalize if the opponent gains a strong position
-
-
-    # check 3 moves ahead
-
 
     return score
