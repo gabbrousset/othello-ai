@@ -38,7 +38,7 @@ class Beaver(Agent):
 
         self.first_run = True
         self.M = None
-        # self.directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+        self.directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
 
         self.corners = []
         self.x_squares = []
@@ -278,7 +278,28 @@ class Beaver(Agent):
 
         score += (num_moves - len(get_valid_moves(board, opponent))) * 10
 
+        score -= (self.count_frontier_discs(board, player) - self.count_frontier_discs(board, opponent)) * 15
+
         return score
+
+    def count_frontier_discs(self, board, player):
+        count = 0
+
+        for i in range(self.M):
+            for j in range(self.M):
+                if board[i, j] == player:
+                    if self.has_x_neighbor(board, (i, j)):
+                        count += 1
+
+        return count
+
+    def has_x_neighbor(self, board, pos, x=0):
+        for dx, dy in self.directions:
+            i, j = pos[0] + dx, pos[1] + dy
+            if 0 <= i < self.M and 0 <= j < self.M:
+                if board[i, j] == x:
+                    return True
+        return False
 
     @staticmethod
     def evaluate_endgame(p1_score, p2_score, player):
